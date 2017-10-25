@@ -3501,7 +3501,8 @@ lString16 htmlCharset(lString16 htmlHeader)
     if ( p<0 )
         return lString16::empty_str;
     htmlHeader = htmlHeader.substr( 0, p );
-    CRLog::trace("http-equiv content-type: %s", UnicodeToUtf8(htmlHeader).c_str());
+    // Commented out because of spam
+    //CRLog::trace("http-equiv content-type: %s", UnicodeToUtf8(htmlHeader).c_str());
     p = htmlHeader.pos("charset=");
     if ( p<0 )
         return lString16::empty_str;
