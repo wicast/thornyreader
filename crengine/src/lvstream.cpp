@@ -315,8 +315,6 @@ lverror_t LVStream::getcrc32( lUInt32 & dst )
     }
 }
 
-
-//#if USE__FILES==1
 #if defined(_LINUX) || defined(_WIN32)
 
 class LVFileMappedStream : public LVNamedStream
@@ -586,7 +584,8 @@ public:
 		);
 		if ( m_hMap==NULL ) {
 			DWORD err = GetLastError();
-            CRLog::error( "LVFileMappedStream::Map() -- Cannot map file to memory, err=%08x, hFile=%08x", err, (lUInt32)m_hFile );
+            CRLog::error( "LVFileMappedStream::Map() -- Cannot map file to memory, err=%08x, hFile=%08x",
+                    err, (lUInt32)m_hFile );
             return error();
 		}
 		m_map = (lUInt8*) MapViewOfFile(
@@ -695,10 +694,10 @@ public:
 		}
         return LVERR_OK;
     }
-	
+
     lverror_t OpenFile( lString16 fname, lvopen_mode_t mode, lvsize_t minSize = (lvsize_t)-1 )
     {
-    	CRLog::trace( "lverror_t OpenFile( lString16 fname, lvopen_mode_t mode, lvsize_t minSize = (lvsize_t)-1 ): %s", UnicodeToLocal(fname).c_str());
+    	CRLog::trace("OpenFile: %s", UnicodeToLocal(fname).c_str());
         m_mode = mode;
         if ( mode!=LVOM_READ && mode!=LVOM_APPEND )
             return LVERR_FAIL; // not supported
@@ -785,7 +784,9 @@ public:
         int flags = (mode==LVOM_READ) ? O_RDONLY : O_RDWR | O_CREAT; // | O_SYNC
         m_fd = open( fn8.c_str(), flags, (mode_t)0666);
         if (m_fd == -1) {
-            CRLog::error( "Error opening file %s for %s, errno=%d, msg=%s", fn8.c_str(), (mode==LVOM_READ) ? "reading" : "read/write",  (int)errno, strerror(errno) );
+            CRLog::error( "Error opening file %s for %s, errno=%d, msg=%s",
+                          fn8.c_str(), (mode==LVOM_READ) ? "reading" : "read/write",
+                          (int)errno, strerror(errno) );
             return error();
         }
         struct stat stat;
@@ -810,7 +811,7 @@ public:
         return LVERR_OK;
 #endif
     }
-    LVFileMappedStream() 
+    LVFileMappedStream()
 #if defined(_WIN32)
 		: m_hFile(NULL), m_hMap(NULL),
 #else
@@ -1351,26 +1352,13 @@ public:
 };
 #endif
 
-/// Tries to split full path name into archive name and file name inside archive using separator "@/" or "@\"
+/// split full path name into archive name and file name inside archive using separator "@/" or "@\"
 bool LVSplitArcName(lString16 fullPathName, lString16& arcPathName, lString16& arcItemPathName)
 {
     int p = fullPathName.pos("@/");
     if (p < 0)
         p = fullPathName.pos("@\\");
     if (p < 0)
-        return false;
-    arcPathName = fullPathName.substr(0, p);
-    arcItemPathName = fullPathName.substr(p + 2);
-    return !arcPathName.empty() && !arcItemPathName.empty();
-}
-
-/// tries to split full path name into archive name and file name inside archive using separator "@/" or "@\"
-bool LVSplitArcName( lString8 fullPathName, lString8 & arcPathName, lString8 & arcItemPathName )
-{
-    int p = fullPathName.pos("@/");
-    if ( p<0 )
-        p = fullPathName.pos("@\\");
-    if ( p<0 )
         return false;
     arcPathName = fullPathName.substr(0, p);
     arcItemPathName = fullPathName.substr(p + 2);
@@ -1474,8 +1462,11 @@ public:
         // make filename
         lString16 fn = m_fname;
         fn << fname;
-        //const char * fb8 = UnicodeToUtf8( fn ).c_str();
-        //printf("Opening directory container file %s : %s fname=%s path=%s\n", UnicodeToUtf8( lString16(fname) ).c_str(), UnicodeToUtf8( fn ).c_str(), UnicodeToUtf8( m_fname ).c_str(), UnicodeToUtf8( m_path ).c_str());
+        /*
+        printf("Opening directory container file %s : %s fname=%s path=%s\n",
+                UnicodeToUtf8( lString16(fname) ).c_str(), UnicodeToUtf8( fn ).c_str(),
+                UnicodeToUtf8( m_fname ).c_str(), UnicodeToUtf8( m_path ).c_str());
+        */
         LVStreamRef stream( LVOpenFileStream( fn.c_str(), mode ) );
         if (!stream) {
             return stream;
@@ -2033,10 +2024,8 @@ typedef struct {
     lUInt16  getAddLen() { return others[10]; }    //1C
     void byteOrderConv()
     {
-        //
         lvByteOrderConv cnv;
-        if ( cnv.msf() )
-        {
+        if ( cnv.msf() ) {
             cnv.rev( &Mark );
             cnv.rev( &Flags );
             for ( int i=0; i<11; i++) {
@@ -2252,7 +2241,10 @@ private:
         {
 
             int outpos = (int)(m_zstream.next_out - m_outbuf);
-            if ( m_decodedpos > ARC_OUTBUF_SIZE/2 || outpos > ARC_OUTBUF_SIZE*2/4 || m_zstream.avail_out==0 || m_inbytesleft==0 )
+            if ( m_decodedpos > ARC_OUTBUF_SIZE/2
+                 || outpos > ARC_OUTBUF_SIZE*2/4
+                 || m_zstream.avail_out==0
+                 || m_inbytesleft==0 )
             {
                 // move rest of data to beginning of buffer
                 for ( int i=(int)m_decodedpos; i<outpos; i++)
@@ -2265,7 +2257,8 @@ private:
             }
         }
         int decoded = m_zstream.avail_out;
-        int res = inflate( &m_zstream, m_inbytesleft > 0 ? Z_NO_FLUSH : Z_FINISH ); //m_inbytesleft | m_zstream.avail_in
+        //m_inbytesleft | m_zstream.avail_in
+        int res = inflate( &m_zstream, m_inbytesleft > 0 ? Z_NO_FLUSH : Z_FINISH );
         decoded -= m_zstream.avail_out;
         if (res == Z_STREAM_ERROR)
         {
@@ -2423,7 +2416,7 @@ public:
     {
         return LVERR_NOTIMPL;
     }
-    static LVStream * Create( LVStreamRef stream, lvpos_t pos, lString16 name, lUInt32 srcPackSize, lUInt32 srcUnpSize )
+    static LVStream* Create(LVStreamRef stream, lvpos_t pos, lString16 name, lUInt32 srcPackSize, lUInt32 srcUnpSize)
     {
         ZipLocalFileHdr hdr;
         unsigned hdr_size = 0x1E; //sizeof(hdr);
@@ -2500,9 +2493,8 @@ public:
         );
         if (!stream.isNull()) {
             stream->SetName(m_list[found_index]->GetName());
-            // Use buffering?
-            //return stream;
             return stream;
+            // Use buffering?
             //return LVCreateBufferedStream( stream, ZIP_STREAM_BUFFER_SIZE );
         }
         return stream;
@@ -2519,18 +2511,16 @@ public:
         lvByteOrderConv cnv;
         //bool arcComment = false;
         bool truncated = false;
-
         m_list.clear();
-        if (!m_stream || m_stream->Seek(0, LVSEEK_SET, NULL)!=LVERR_OK)
+        if (!m_stream || m_stream->Seek(0, LVSEEK_SET, NULL)!=LVERR_OK) {
             return 0;
-
+        }
         SetName( m_stream->GetName() );
-
-
         lvsize_t sz = 0;
-        if (m_stream->GetSize( &sz )!=LVERR_OK)
-                return 0;
-        lvsize_t m_FileSize = (unsigned)sz;
+        if (m_stream->GetSize( &sz )!=LVERR_OK) {
+            return 0;
+        }
+        lvsize_t m_FileSize = (unsigned) sz;
 
         char ReadBuf[1024];
         lUInt32 NextPosition;
@@ -2539,22 +2529,20 @@ public:
         int Buf;
         bool found = false;
         CurPos=NextPosition=(int)m_FileSize;
-        if (CurPos < sizeof(ReadBuf)-18)
+        if (CurPos < sizeof(ReadBuf)-18) {
             CurPos = 0;
-        else
-            CurPos -= sizeof(ReadBuf)-18;
-        for ( Buf=0; Buf<64 && !found; Buf++ )
-        {
+        } else {
+            CurPos -= sizeof(ReadBuf) - 18;
+        }
+        for ( Buf=0; Buf<64 && !found; Buf++ ) {
             //SetFilePointer(ArcHandle,CurPos,NULL,FILE_BEGIN);
             m_stream->Seek( CurPos, LVSEEK_SET, NULL );
             m_stream->Read( ReadBuf, sizeof(ReadBuf), &ReadSize);
             if (ReadSize==0)
                 break;
-            for (int I=(int)ReadSize-4;I>=0;I--)
-            {
+            for (int I=(int)ReadSize-4;I>=0;I--) {
                 if (ReadBuf[I]==0x50 && ReadBuf[I+1]==0x4b && ReadBuf[I+2]==0x05 &&
-                    ReadBuf[I+3]==0x06)
-                {
+                    ReadBuf[I+3]==0x06) {
                     m_stream->Seek( CurPos+I+16, LVSEEK_SET, NULL );
                     m_stream->Read( &NextPosition, sizeof(NextPosition), &ReadSize);
 		    		cnv.lsf( &NextPosition );
@@ -2574,23 +2562,18 @@ public:
         if (truncated)
             NextPosition=0;
 
-        //================================================================
         // get files
-
 
         ZipLocalFileHdr ZipHd1;
         ZipHd2 ZipHeader;
         unsigned ZipHeader_size = 0x2E; //sizeof(ZipHd2); //0x34; //
         unsigned ZipHd1_size = 0x1E; //sizeof(ZipHd1); //sizeof(ZipHd1)
-          //lUInt32 ReadSize;
-
+        //lUInt32 ReadSize;
         for (;;) {
-
-            if (m_stream->Seek( NextPosition, LVSEEK_SET, NULL )!=LVERR_OK)
+            if (m_stream->Seek( NextPosition, LVSEEK_SET, NULL )!=LVERR_OK) {
                 return 0;
-
-            if (truncated)
-            {
+            }
+            if (truncated) {
                 m_stream->Read( &ZipHd1, ZipHd1_size, &ReadSize);
                 ZipHd1.byteOrderConv();
 
@@ -2616,28 +2599,23 @@ public:
                 ZipHeader.AddLen=ZipHd1.getAddLen();
                 ZipHeader.Method=ZipHd1.getMethod();
             } else {
-
                 m_stream->Read( &ZipHeader, ZipHeader_size, &ReadSize);
-
                 ZipHeader.byteOrderConv();
-                    //ReadSize = fread(&ZipHeader, 1, sizeof(ZipHeader), f);
+                //ReadSize = fread(&ZipHeader, 1, sizeof(ZipHeader), f);
                 if (ReadSize!=ZipHeader_size) {
                             if (ReadSize>16 && ZipHeader.Mark==0x06054B50 ) {
-                                    break;
+                                break;
                             }
                             //fclose(f);
                             return 0;
                 }
             }
-
             if (ReadSize==0 || ZipHeader.Mark==0x06054b50 ||
-                    (truncated && ZipHeader.Mark==0x02014b50) )
-            {
+                    (truncated && ZipHeader.Mark==0x02014b50)) {
 //                if (!truncated && *(lUInt16 *)((char *)&ZipHeader+20)!=0)
 //                    arcComment=true;
                 break; //(GETARC_EOF);
             }
-
             //const int NM = 513;
             const int max_NM = 4096;
             if ( ZipHeader.NameLen>max_NM ) {
@@ -2676,12 +2654,13 @@ public:
 
             item->SetItemInfo(fName.c_str(), ZipHeader.UnpSize, (ZipHeader.getAttr() & 0x3f));
             item->SetSrc( ZipHeader.getOffset(), ZipHeader.PackSize, ZipHeader.Method );
-
 //#define DUMP_ZIP_HEADERS
 #ifdef DUMP_ZIP_HEADERS
-            CRLog::trace("ZIP entry '%s' unpSz=%d, pSz=%d, m=%x, offs=%x, zAttr=%x, flg=%x", LCSTR(fName), (int)ZipHeader.UnpSize, (int)ZipHeader.PackSize, (int)ZipHeader.Method, (int)ZipHeader.getOffset(), (int)ZipHeader.getZIPAttr(), (int)ZipHeader.getAttr());
-            //, addL=%d, commL=%d, dn=%d
-            //, (int)ZipHeader.AddLen, (int)ZipHeader.CommLen, (int)ZipHeader.DiskNum
+            CRLog::trace("ZIP entry %s unpSz=%d, pSz=%d, m=%x, offs=%x, zAttr=%x, flg=%x, addL=%d, commL=%d, dn=%d",
+                    LCSTR(fName), (int)ZipHeader.UnpSize, (int)ZipHeader.PackSize,
+                    (int)ZipHeader.Method, (int)ZipHeader.getOffset(), (int)ZipHeader.getZIPAttr(),
+                    (int)ZipHeader.getAttr(), (int)ZipHeader.AddLen, (int)ZipHeader.CommLen,
+                    (int)ZipHeader.DiskNum);
 #endif
 
             m_list.add(item);
@@ -3600,8 +3579,9 @@ LVStreamRef LVMapFileStream( const lChar16 * pathname, lvopen_mode_t mode, lvsiz
     }
     return LVStreamRef();
 #else
-        LVFileMappedStream * stream = LVFileMappedStream::CreateFileStream( lString16(pathname), mode, (int)minSize );
-        return LVStreamRef(stream);
+    LVFileMappedStream* stream = LVFileMappedStream::CreateFileStream(
+            lString16(pathname), mode, (int)minSize );
+    return LVStreamRef(stream);
 #endif
 }
 
@@ -3617,6 +3597,11 @@ bool LVDeleteFile( lString16 filename )
 #endif
 }
 
+/// delete file, return true if file found and successfully deleted
+bool LVDeleteFile( lString8 filename ) {
+    return LVDeleteFile(Utf8ToUnicode(filename));
+}
+
 /// rename file
 bool LVRenameFile(lString16 oldname, lString16 newname) {
     return LVRenameFile(UnicodeToUtf8(oldname), UnicodeToUtf8(newname));
@@ -3628,7 +3613,8 @@ bool LVRenameFile(lString8 oldname, lString8 newname) {
     CRLog::trace("Renaming %s to %s", oldname.c_str(), newname.c_str());
     bool res = MoveFileW(Utf8ToUnicode(oldname).c_str(), Utf8ToUnicode(newname).c_str()) != 0;
     if (!res) {
-        CRLog::error("Renaming result: %s for renaming of %s to %s", res ? "success" : "failed", oldname.c_str(), newname.c_str());
+        CRLog::error("Renaming result: %s for renaming of %s to %s",
+                res ? "success" : "failed", oldname.c_str(), newname.c_str());
         CRLog::error("Last Error: %d", GetLastError());
     }
     return res;
@@ -3636,469 +3622,3 @@ bool LVRenameFile(lString8 oldname, lString8 newname) {
     return !rename(oldname.c_str(), newname.c_str());
 #endif
 }
-
-/// delete file, return true if file found and successfully deleted
-bool LVDeleteFile( lString8 filename ) {
-    return LVDeleteFile(Utf8ToUnicode(filename));
-}
-
-/// delete directory, return true if directory is found and successfully deleted
-bool LVDeleteDirectory( lString16 filename ) {
-#ifdef _WIN32
-    return RemoveDirectoryW( filename.c_str() ) ? true : false;
-#else
-    if ( unlink( UnicodeToUtf8( filename ).c_str() ) )
-        return false;
-    return true;
-#endif
-}
-
-/// delete directory, return true if directory is found and successfully deleted
-bool LVDeleteDirectory( lString8 filename ) {
-    return LVDeleteDirectory(Utf8ToUnicode(filename));
-}
-
-#define TRACE_BLOCK_WRITE_STREAM 0
-
-class LVBlockWriteStream : public LVNamedStream
-{
-    LVStreamRef _baseStream;
-    int _blockSize;
-    int _blockCount;
-    lvpos_t _pos;
-    lvpos_t _size;
-
-
-    struct Block
-    {
-        lvpos_t block_start;
-        lvpos_t block_end;
-        lvpos_t modified_start;
-        lvpos_t modified_end;
-        lUInt8 * buf;
-        int size;
-        Block * next;
-
-        Block( lvpos_t start, lvpos_t end, int block_size )
-            : block_start( start/block_size*block_size ), block_end( end )
-            , modified_start((lvpos_t)-1), modified_end((lvpos_t)-1)
-            , size( block_size ), next(NULL)
-        {
-            buf = (lUInt8*)malloc( size );
-            if ( !buf ) {
-                CRLog::error("buffer allocation failed");
-            }
-            memset(buf, 0, size);
-//            modified_start = 0;
-//            modified_end = size;
-        }
-        ~Block()
-        {
-            free(buf);
-        }
-
-        void save( const lUInt8 * ptr, lvpos_t pos, lvsize_t len )
-        {
-#if TRACE_BLOCK_WRITE_STREAM
-            CRLog::trace("block %x save %x, %x", (int)block_start, (int)pos, (int)len);
-#endif
-            int offset = (int)(pos - block_start);
-            if (offset > size || offset < 0 || (int)len > size || offset + (int)len > size) {
-                CRLog::error("Unaligned access to block %x", (int)block_start);
-            }
-            for (unsigned i = 0; i < len; i++ ) {
-                lUInt8 ch1 = buf[offset+i];
-                if ( pos+i>block_end || ch1!=ptr[i] ) {
-                    buf[offset+i] = ptr[i];
-                    if ( modified_start==(lvpos_t)-1 ) {
-                        modified_start = pos + i;
-                        modified_end = modified_start + 1;
-                    } else {
-                        if ( modified_start>pos+i )
-                            modified_start = pos+i;
-                        if ( modified_end<pos+i+1)
-                            modified_end = pos+i+1;
-                        if ( block_end<pos+i+1)
-                            block_end = pos+i+1;
-                    }
-                }
-            }
-
-        }
-
-        bool containsPos( lvpos_t pos )
-        {
-            return pos>=block_start && pos<block_start+size;
-        }
-    };
-
-    // list of blocks
-    Block * _firstBlock;
-    int _count;
-
-    /// set write bytes limit to call flush(true) automatically after writing of each sz bytes
-    void setAutoSyncSize(lvsize_t sz) {
-        _baseStream->setAutoSyncSize(sz);
-        handleAutoSync(0);
-    }
-
-
-    /// fills block with data existing in file
-    lverror_t readBlock( Block * block )
-    {
-        if ( !block->size ) {
-            CRLog::error("Invalid block size");
-        }
-        lvpos_t start = block->block_start;
-        lvpos_t end = start + _blockSize;
-        lvpos_t ssize = 0;
-        lverror_t res = LVERR_OK;
-        res = _baseStream->GetSize( &ssize);
-        if ( res!=LVERR_OK )
-            return res;
-        if ( end>ssize )
-            end = ssize;
-        if ( end<=start )
-            return LVERR_OK;
-        _baseStream->SetPos( start );
-        lvsize_t bytesRead = 0;
-        block->block_end = end;
-#if TRACE_BLOCK_WRITE_STREAM
-        CRLog::trace("block %x filling from stream %x, %x", (int)block->block_start, (int)block->block_start, (int)(block->block_end-block->block_start));
-#endif
-        res = _baseStream->Read( block->buf, end-start, &bytesRead );
-        if ( res!=LVERR_OK )
-            CRLog::error("Error while reading block %x from file of size %x", block->block_start, ssize);
-        return res;
-    }
-
-    lverror_t writeBlock( Block * block )
-    {
-        if ( block->modified_start < block->modified_end ) {
-#if TRACE_BLOCK_WRITE_STREAM
-            CRLog::trace("WRITE BLOCK %x (%x, %x)", (int)block->block_start, (int)block->modified_start, (int)(block->modified_end-block->modified_start));
-#endif
-            _baseStream->SetPos( block->modified_start );
-            if (block->modified_end > _size) {
-                block->modified_end = block->block_end;
-            }
-            lvpos_t bytesWritten = 0;
-            lverror_t res = _baseStream->Write( block->buf + (block->modified_start-block->block_start), block->modified_end-block->modified_start, &bytesWritten );
-            if ( res==LVERR_OK ) {
-                if (_size < block->modified_end)
-                    _size = block->modified_end;
-            }
-            block->modified_end = block->modified_start = (lvpos_t)-1;
-            return res;
-        } else
-            return LVERR_OK;
-    }
-
-    Block * newBlock( lvpos_t start, int len )
-    {
-        Block * b = new Block( start, start+len, _blockSize );
-        return b;
-    }
-
-    /// find block, move to top if found
-    Block * findBlock( lvpos_t pos )
-    {
-        for ( Block ** p = &_firstBlock; *p; p=&(*p)->next ) {
-            Block * item = *p;
-            if ( item->containsPos(pos) ) {
-                if ( item!=_firstBlock ) {
-#if TRACE_BLOCK_WRITE_STREAM
-                    dumpBlocks("before reorder");
-#endif
-                    *p = item->next;
-                    item->next = _firstBlock;
-                    _firstBlock = item;
-#if TRACE_BLOCK_WRITE_STREAM
-                    dumpBlocks("after reorder");
-                    CRLog::trace("found block %x (%x, %x)", (int)item->block_start, (int)item->modified_start, (int)(item->modified_end-item->modified_start));
-#endif
-                }
-                return item;
-            }
-        }
-        return NULL;
-    }
-
-    // try read block-aligned fragment from cache
-    bool readFromCache( void * buf, lvpos_t pos, lvsize_t count )
-    {
-        Block * p = findBlock( pos );
-        if ( p ) {
-#if TRACE_BLOCK_WRITE_STREAM
-            CRLog::trace("read from cache block %x (%x, %x)", (int)p->block_start, (int)pos, (int)(count));
-#endif
-            memcpy( buf, p->buf + (pos-p->block_start), count );
-            return true;
-        }
-        return false;
-    }
-
-    // write block-aligned fragment to cache
-    lverror_t writeToCache( const void * buf, lvpos_t pos, lvsize_t count )
-    {
-        Block * p = findBlock( pos );
-        if ( p ) {
-#if TRACE_BLOCK_WRITE_STREAM
-            CRLog::trace("saving data to existing block %x (%x, %x)", (int)p->block_start, (int)pos, (int)count);
-#endif
-            p->save( (const lUInt8 *)buf, pos, count );
-            if ( pos + count > _size )
-                _size = pos + count;
-            return LVERR_OK;
-        }
-#if TRACE_BLOCK_WRITE_STREAM
-        CRLog::trace("Block %x not found in cache", pos);
-#endif
-        if ( _count>=_blockCount-1 ) {
-            // remove last
-            for ( Block * p = _firstBlock; p; p=p->next ) {
-                if ( p->next && !p->next->next ) {
-#if TRACE_BLOCK_WRITE_STREAM
-                    dumpBlocks("before remove last");
-                    CRLog::trace("dropping block %x (%x, %x)", (int)p->next->block_start, (int)p->next->modified_start, (int)(p->next->modified_end-p->next->modified_start));
-#endif
-                    writeBlock( p->next );
-                    delete p->next;
-                    _count--;
-                    p->next = NULL;
-#if TRACE_BLOCK_WRITE_STREAM
-                    dumpBlocks("after remove last");
-#endif
-                }
-            }
-        }
-        p = newBlock( pos, count );
-#if TRACE_BLOCK_WRITE_STREAM
-        CRLog::trace("creating block %x", (int)p->block_start);
-#endif
-        if ( readBlock( p )!=LVERR_OK ) {
-            return LVERR_FAIL;
-        }
-#if TRACE_BLOCK_WRITE_STREAM
-        CRLog::trace("saving data to new block %x (%x, %x)", (int)p->block_start, (int)pos, (int)count);
-#endif
-        p->save( (const lUInt8 *)buf, pos, count );
-        p->next = _firstBlock;
-        _firstBlock = p;
-        _count++;
-        if ( pos + count > _size ) {
-            _size = pos + count;
-            p->modified_start = p->block_start;
-            p->modified_end = p->block_end;
-        }
-        return LVERR_OK;
-    }
-
-
-public:
-    /// flushes unsaved data from buffers to file, with optional flush of OS buffers
-    virtual lverror_t Flush(bool sync)
-    {
-#if TRACE_BLOCK_WRITE_STREAM
-        CRLog::trace("flushing unsaved blocks");
-#endif
-        lverror_t res = LVERR_OK;
-        for ( Block * p = _firstBlock; p; ) {
-            Block * tmp = p;
-            if ( writeBlock(p)!=LVERR_OK )
-                res = LVERR_FAIL;
-            p = p->next;
-            delete tmp;
-        }
-        _firstBlock = NULL;
-        _baseStream->Flush( sync );
-        return res;
-    }
-
-
-    virtual ~LVBlockWriteStream()
-    {
-        Flush( true );
-    }
-
-    virtual const lChar16 * GetName()
-            { return _baseStream->GetName(); }
-    virtual lvopen_mode_t GetMode()
-            { return _baseStream->GetMode(); }
-
-    LVBlockWriteStream( LVStreamRef baseStream, int blockSize, int blockCount )
-    : _baseStream( baseStream ), _blockSize( blockSize ), _blockCount( blockCount ), _firstBlock(NULL), _count(0)
-    {
-        _pos = _baseStream->GetPos();
-        _size = _baseStream->GetSize();
-    }
-
-    virtual lvpos_t GetSize()
-    {
-        return _size;
-    }
-
-    virtual lverror_t Seek( lvoffset_t offset, lvseek_origin_t origin, lvpos_t * pNewPos )
-    {
-        if ( origin==LVSEEK_CUR ) {
-            origin = LVSEEK_SET;
-            offset = _pos + offset;
-        } else if ( origin==LVSEEK_END ) {
-            origin = LVSEEK_SET;
-            offset = _size + offset;
-        }
-
-        lvpos_t newpos = 0;
-        lverror_t res = _baseStream->Seek(offset, origin, &newpos);
-        if ( res==LVERR_OK ) {
-            if ( pNewPos )
-                *pNewPos = newpos;
-            _pos = newpos;
-        } else {
-            CRLog::error("baseStream->Seek(%d,%x) failed: %d", (int)origin, (int)offset, (int)res);
-        }
-        return res;
-    }
-
-    virtual lverror_t Tell( lvpos_t * pPos )
-    {
-        *pPos = _pos;
-        return LVERR_OK;
-    }
-    //virtual lverror_t   SetPos(lvpos_t p)
-    virtual lvpos_t   SetPos(lvpos_t p)
-    {
-        lvpos_t res = _baseStream->SetPos(p);
-        _pos = _baseStream->GetPos();
-//                if ( _size<_pos )
-//                    _size = _pos;
-        return res;
-    }
-    virtual lvpos_t   GetPos()
-    {
-        return _pos;
-    }
-    virtual lverror_t SetSize( lvsize_t size )
-    {
-        // TODO:
-        lverror_t res = _baseStream->SetSize(size);
-        if ( res==LVERR_OK )
-            _size = size;
-        return res;
-    }
-
-    void dumpBlocks( const char * context)
-    {
-        lString8 buf;
-        for ( Block * p = _firstBlock; p; p = p->next ) {
-            char s[1000];
-            sprintf(s, "%x ", (int)p->block_start);
-            buf << s;
-        }
-        CRLog::trace("BLOCKS (%s): %s   count=%d", context, buf.c_str(), _count);
-    }
-
-    virtual lverror_t Read( void * buf, lvsize_t count, lvsize_t * nBytesRead )
-    {
-#if TRACE_BLOCK_WRITE_STREAM
-        CRLog::trace("stream::Read(%x, %x)", (int)_pos, (int)count);
-        dumpBlocks("before read");
-#endif
-        // slice by block bounds
-        lvsize_t bytesRead = 0;
-        lverror_t res = LVERR_OK;
-		if ( _pos > _size ) {
-			if ( nBytesRead )
-				*nBytesRead = bytesRead;
-			return LVERR_FAIL;
-		}
-        if ( _pos + count > _size )
-            count = (int)(_size - _pos);
-        while ( (int)count>0 && res==LVERR_OK ) {
-            lvpos_t blockSpaceLeft = _blockSize - (_pos % _blockSize);
-            if ( blockSpaceLeft > count )
-                blockSpaceLeft = count;
-            lvsize_t blockBytesRead = 0;
-
-            // read from Write buffers if possible, otherwise - from base stream
-            if ( readFromCache( buf, _pos, blockSpaceLeft ) ) {
-                blockBytesRead = blockSpaceLeft;
-                res = LVERR_OK;
-            } else {
-#if TRACE_BLOCK_WRITE_STREAM
-                CRLog::trace("direct reading from stream (%x, %x)", (int)_pos, (int)blockSpaceLeft);
-#endif
-                _baseStream->SetPos(_pos);
-                res = _baseStream->Read(buf, blockSpaceLeft, &blockBytesRead);
-            }
-            if ( res!=LVERR_OK )
-                break;
-
-            count -= blockBytesRead;
-            buf = ((char*)buf) + blockBytesRead;
-            _pos += blockBytesRead;
-            bytesRead += blockBytesRead;
-            if ( !blockBytesRead )
-                break;
-        }
-        if ( nBytesRead && res==LVERR_OK )
-            *nBytesRead = bytesRead;
-        return res;
-    }
-
-    virtual lverror_t Write( const void * buf, lvsize_t count, lvsize_t * nBytesWritten )
-    {
-#if TRACE_BLOCK_WRITE_STREAM
-        CRLog::trace("stream::Write(%x, %x)", (int)_pos, (int)count);
-        dumpBlocks("before write");
-#endif
-        // slice by block bounds
-        lvsize_t bytesRead = 0;
-        lverror_t res = LVERR_OK;
-        //if ( _pos + count > _size )
-        //    count = _size - _pos;
-        while ( count>0 && res==LVERR_OK ) {
-            lvpos_t blockSpaceLeft = _blockSize - (_pos % _blockSize);
-            if ( blockSpaceLeft > count )
-                blockSpaceLeft = count;
-            lvsize_t blockBytesWritten = 0;
-
-            // read from Write buffers if possible, otherwise - from base stream
-            res = writeToCache(buf, _pos, blockSpaceLeft);
-            if ( res!=LVERR_OK )
-                break;
-
-            blockBytesWritten = blockSpaceLeft;
-
-            count -= blockBytesWritten;
-            buf = ((char*)buf) + blockBytesWritten;
-            _pos += blockBytesWritten;
-            bytesRead += blockBytesWritten;
-            if ( _pos>_size )
-                _size = _pos;
-            if ( !blockBytesWritten )
-                break;
-        }
-        if ( nBytesWritten && res==LVERR_OK )
-            *nBytesWritten = bytesRead;
-#if TRACE_BLOCK_WRITE_STREAM
-        dumpBlocks("after write");
-#endif
-        return res;
-    }
-    virtual bool Eof()
-    {
-        return _pos >= _size;
-    }
-};
-
-LVStreamRef LVCreateBlockWriteStream( LVStreamRef baseStream, int blockSize, int blockCount )
-{
-    if ( baseStream.isNull() || baseStream->GetMode()==LVOM_READ )
-        return baseStream;
-    return LVStreamRef( new LVBlockWriteStream(baseStream, blockSize, blockCount) );
-}
-
-
-
-

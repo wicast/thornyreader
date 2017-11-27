@@ -158,7 +158,10 @@ public:
         \return lverror_t status: LVERR_OK if success
     */
     //virtual lverror_t SetPos(lvpos_t p) { return Seek(p, LVSEEK_SET, NULL); }
-    virtual lvpos_t   SetPos(lvpos_t p) { lvpos_t pos; return (Seek(p, LVSEEK_SET, &pos)==LVERR_OK)?pos:(lvpos_t)(~0); }
+    virtual lvpos_t   SetPos(lvpos_t p) {
+        lvpos_t pos;
+        return (Seek(p, LVSEEK_SET, &pos)==LVERR_OK)?pos:(lvpos_t)(~0);
+    }
 
     /// Get file position
     /**
@@ -793,11 +796,13 @@ LVContainerRef LVOpenArchieve(LVStreamRef stream);
 /**
     \param buf is pointer to buffer, if NULL, empty read/write memory stream will be created
     \param bufSize is buffer size, in bytes
-    \param createCopy if true, read/write copy of specified data is being created, otherwise non-managed readonly buffer is being used as is
+    \param createCopy if true, read/write copy of specified data is being created,
+    otherwise non-managed readonly buffer is being used as is
     \param mode is open mode
     \return reference to opened stream if success, NULL reference if error
 */
-LVStreamRef LVCreateMemoryStream( void * buf = NULL, int bufSize = 0, bool createCopy = false, lvopen_mode_t mode = LVOM_READ );
+LVStreamRef LVCreateMemoryStream( void * buf = NULL, int bufSize = 0, bool createCopy = false,
+                                  lvopen_mode_t mode = LVOM_READ );
 /// Creates memory stream as copy of another stream.
 LVStreamRef LVCreateMemoryStream( LVStreamRef srcStream );
 /// Creates memory stream as copy of file contents.
@@ -807,7 +812,7 @@ LVStreamRef LVCreateStringStream( lString8 data );
 /// Creates memory stream as copy of string contents
 LVStreamRef LVCreateStringStream( lString16 data );
 
-/// creates cache buffers for stream, to write data by big blocks to optimize Flash drives writing performance
+/// cache buffers for stream, to write data by big blocks to optimize FDD writing performance
 LVStreamRef LVCreateBlockWriteStream( LVStreamRef baseStream, int blockSize, int blockCount );
 
 LVContainerRef LVOpenDirectory( const lChar16 * path, const wchar_t * mask = L"*.*" );
@@ -823,10 +828,6 @@ bool LVCreateDirectory( lString16 path );
 bool LVDeleteFile( lString16 filename );
 /// delete file, return true if file found and successfully deleted
 bool LVDeleteFile( lString8 filename );
-/// delete directory, return true if directory is found and successfully deleted
-bool LVDeleteDirectory( lString16 filename );
-/// delete directory, return true if directory is found and successfully deleted
-bool LVDeleteDirectory( lString8 filename );
 /// rename file
 bool LVRenameFile(lString16 oldname, lString16 newname);
 /// rename file
@@ -879,10 +880,7 @@ lString16 LVMakeRelativeFilename( lString16 basePath, lString16 pathName );
 // resolve relative links
 lString16 LVCombinePaths( lString16 basePath, lString16 newPath );
 
-/// tries to split full path name into archive name and file name inside archive using separator "@/" or "@\"
 bool LVSplitArcName(lString16 fullPathName, lString16 & arcPathName, lString16 & arcItemPathName);
-/// tries to split full path name into archive name and file name inside archive using separator "@/" or "@\"
-bool LVSplitArcName(lString8 fullPathName, lString8 & arcPathName, lString8 & arcItemPathName);
 
 /// returns true if specified file exists
 bool LVFileExists( const lString16 & pathName );
@@ -894,7 +892,6 @@ bool LVDirectoryExists( const lString16 & pathName );
 bool LVDirectoryExists( const lString8 & pathName );
 /// returns true if directory exists and your app can write to directory
 bool LVDirectoryIsWritable(const lString16 & pathName);
-
 
 /// factory to handle filesystem access for paths started with ASSET_PATH_PREFIX (@ sign)
 class LVAssetContainerFactory {
