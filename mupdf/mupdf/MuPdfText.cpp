@@ -192,7 +192,7 @@ void MuPdfBridge::processText(int pageNo, const char* pattern, CmdResponse& resp
     {
         const char* msg = fz_caught_message(ctx);
         ERROR_L(LCTX, "%s", msg);
-        response.result = RES_MUPDF_FAIL;
+        response.result = RES_INTERNAL_ERROR;
     }
 
     DEBUG_L(L_DEBUG_TEXT, LCTX, "processText: end");

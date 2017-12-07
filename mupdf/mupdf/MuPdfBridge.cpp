@@ -227,12 +227,16 @@ void MuPdfBridge::processOpen(CmdRequest& request, CmdResponse& response)
     uint32_t doc_format = 0;
     uint8_t* socketName = NULL;
     uint8_t* file_name = NULL;
+    uint32_t compressed_size = 0;
+    uint32_t smart_archive = 0;
     uint8_t* password = NULL;
 
     CmdDataIterator iter(request.first);
     iter.getInt(&doc_format)
             .getByteArray(&socketName)
             .getByteArray(&file_name)
+            .getInt(&compressed_size)
+            .getInt(&smart_archive)
             .optionalByteArray(&password, NULL);
 
     if (!iter.isValid())
@@ -313,7 +317,7 @@ void MuPdfBridge::processOpen(CmdRequest& request, CmdResponse& response)
         {
             const char* msg = fz_caught_message(ctx);
             ERROR_L(LCTX, "Opening document failed: %s", msg);
-            response.result = RES_MUPDF_FAIL;
+            response.result = RES_INTERNAL_ERROR;
             response.addIpcString(msg, true);
             return;
         }
@@ -354,7 +358,7 @@ void MuPdfBridge::processOpen(CmdRequest& request, CmdResponse& response)
         {
             const char* msg = fz_caught_message(ctx);
             ERROR_L(LCTX, "Counting pages failed: %s", msg );
-            response.result = RES_MUPDF_FAIL;
+            response.result = RES_INTERNAL_ERROR;
             response.addIpcString(msg, true);
             return;
         }
@@ -414,7 +418,7 @@ void MuPdfBridge::processPageInfo(CmdRequest& request, CmdResponse& response)
     if (!page)
     {
         ERROR_L(LCTX, "No page %d found", pageNo);
-        response.result = RES_MUPDF_FAIL;
+        response.result = RES_INTERNAL_ERROR;
         return;
     }
 
@@ -433,7 +437,7 @@ void MuPdfBridge::processPageInfo(CmdRequest& request, CmdResponse& response)
     {
         const char* msg = fz_caught_message(ctx);
         ERROR_L(LCTX, "%s", msg);
-        response.result = RES_MUPDF_FAIL;
+        response.result = RES_INTERNAL_ERROR;
         return;
     }
 }
@@ -479,7 +483,7 @@ void MuPdfBridge::processPage(CmdRequest& request, CmdResponse& response)
     fz_page* p = getPage(pageNumber, true);
     if (p == NULL)
     {
-        response.result = RES_MUPDF_FAIL;
+        response.result = RES_INTERNAL_ERROR;
         return;
     }
 }
@@ -668,7 +672,7 @@ void MuPdfBridge::processPageRender(CmdRequest& request, CmdResponse& response)
     {
         const char* msg = fz_caught_message(ctx);
         ERROR_L(LCTX, "%s", msg);
-        response.result = RES_MUPDF_FAIL;
+        response.result = RES_INTERNAL_ERROR;
         delete resp;
     }
 }
@@ -1039,7 +1043,7 @@ void MuPdfBridge::processSmartCrop(CmdRequest& request, CmdResponse& response)
 
     fz_page* page = getPage(page_index, true);
     if (!page) {
-        response.result = RES_MUPDF_FAIL;
+        response.result = RES_INTERNAL_ERROR;
         return;
     }
 
@@ -1091,7 +1095,7 @@ void MuPdfBridge::processSmartCrop(CmdRequest& request, CmdResponse& response)
             } fz_catch(ctx) {
         const char* msg = fz_caught_message(ctx);
         ERROR_L(LCTX, "%s", msg);
-        response.result = RES_MUPDF_FAIL;
+        response.result = RES_INTERNAL_ERROR;
         if (pixels) {
             free(pixels);
             pixels = NULL;

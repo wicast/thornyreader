@@ -38,7 +38,7 @@ public:
 
 bool DetectEpubFormat(LVStreamRef stream)
 {
-    LVContainerRef m_arc = LVOpenArchieve(stream);
+    LVContainerRef m_arc = LVOpenArchive(stream);
     if (m_arc.isNull()) {
         // Not a ZIP archive
         return false;
@@ -266,7 +266,10 @@ LVStreamRef EncryptedDataContainer::OpenStream(const lChar16 * fname, lvopen_mod
 		return LVStreamRef(new FontDemanglingStream(res, _fontManglingKey));
 	return res;
 }
-
+LVStreamRef EncryptedDataContainer::OpenStreamByCompressedSize(uint32_t size)
+{
+    return LVStreamRef();
+}
 /// returns stream/container name, may be NULL if unknown
 const lChar16 * EncryptedDataContainer::GetName()
 {
@@ -588,7 +591,7 @@ public:
 
 bool ImportEpubDocument(LVStreamRef stream, CrDom* m_doc)
 {
-    LVContainerRef arc = LVOpenArchieve( stream );
+    LVContainerRef arc = LVOpenArchive(stream);
     if (arc.isNull())
         return false; // not a ZIP archive
 

@@ -288,9 +288,15 @@ void CreBridge::processOpen(CmdRequest& request, CmdResponse& response)
     CmdDataIterator iter(request.first);
     uint32_t doc_format = 0;
     uint8_t* socket_name = NULL;
-    uint8_t* file_name = NULL;
-    iter.getInt(&doc_format).getByteArray(&socket_name).getByteArray(&file_name);
-    if (!iter.isValid() || !socket_name || !file_name) {
+    uint8_t* absolute_path_arg = NULL;
+    uint32_t compressed_size = 0;
+    uint32_t smart_archive_arg = 0;
+    iter.getInt(&doc_format)
+            .getByteArray(&socket_name)
+            .getByteArray(&absolute_path_arg)
+            .getInt(&compressed_size)
+            .getInt(&smart_archive_arg);
+    if (!iter.isValid() || !socket_name || !absolute_path_arg) {
         response.result = RES_BAD_REQ_DATA;
         return;
     }
@@ -305,9 +311,16 @@ void CreBridge::processOpen(CmdRequest& request, CmdResponse& response)
         response.result = RES_BAD_REQ_DATA;
         return;
     }
-    if (doc_view_->LoadDoc(doc_format, reinterpret_cast<const char*>(file_name))) {
+    const char* absolute_path = reinterpret_cast<const char*>(absolute_path_arg);
+    bool smart_archive = (bool) smart_archive_arg;
+    bool result = doc_view_->LoadDoc(doc_format, absolute_path, compressed_size, smart_archive);
+    if (result) {
         doc_view_->RenderIfDirty();
         response.addInt(ExportPagesCount(doc_view_->GetColumns(), doc_view_->GetPagesCount()));
+    } else if (compressed_size > 0) {
+        response.result = RES_ARCHIVE_COLLISION;
+    } else {
+        response.result = RES_INTERNAL_ERROR;
     }
 }
 

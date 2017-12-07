@@ -520,6 +520,7 @@ public:
     virtual const LVContainerItemInfo * operator [] (int index) { return GetObjectInfo(index); }
     virtual int GetObjectCount() const = 0;
     virtual LVStreamRef OpenStream( const lChar16 * fname, lvopen_mode_t mode ) = 0;
+    virtual LVStreamRef OpenStreamByCompressedSize(uint32_t size) = 0;
     LVContainer() {}
     virtual ~LVContainer() { }
 };
@@ -790,7 +791,7 @@ LVStreamRef LVMapFileStream( const lChar8 * pathname, lvopen_mode_t mode, lvsize
     \param stream is archieve file stream
     \return reference to opened archieve if success, NULL reference if error
 */
-LVContainerRef LVOpenArchieve(LVStreamRef stream);
+LVContainerRef LVOpenArchive(LVStreamRef stream);
 
 /// Creates memory stream
 /**
@@ -879,9 +880,6 @@ bool LVIsAbsolutePath( lString16 pathName );
 lString16 LVMakeRelativeFilename( lString16 basePath, lString16 pathName );
 // resolve relative links
 lString16 LVCombinePaths( lString16 basePath, lString16 newPath );
-
-bool LVSplitArcName(lString16 fullPathName, lString16 & arcPathName, lString16 & arcItemPathName);
-
 /// returns true if specified file exists
 bool LVFileExists( const lString16 & pathName );
 /// returns true if specified file exists
@@ -892,18 +890,5 @@ bool LVDirectoryExists( const lString16 & pathName );
 bool LVDirectoryExists( const lString8 & pathName );
 /// returns true if directory exists and your app can write to directory
 bool LVDirectoryIsWritable(const lString16 & pathName);
-
-/// factory to handle filesystem access for paths started with ASSET_PATH_PREFIX (@ sign)
-class LVAssetContainerFactory {
-public:
-	virtual LVContainerRef openAssetContainer(lString16 path) = 0;
-	virtual LVStreamRef openAssetStream(lString16 path) = 0;
-	LVAssetContainerFactory() {}
-	virtual ~LVAssetContainerFactory() {}
-};
-
-#define ASSET_PATH_PREFIX '@'
-/// set container to handle filesystem access for paths started with ASSET_PATH_PREFIX (@ sign)
-void LVSetAssetContainerFactory(LVAssetContainerFactory * asset);
 
 #endif // __LVSTREAM_H_INCLUDED__

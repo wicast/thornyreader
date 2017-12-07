@@ -60,10 +60,6 @@
 #define UNKNOWN_NAMESPACE_TYPE_ID (MAX_NAMESPACE_TYPE_ID>>1)
 
 // document property names
-#define DOC_PROP_ARC_NAME        "doc.archive.name"
-#define DOC_PROP_ARC_PATH        "doc.archive.path"
-#define DOC_PROP_FILE_NAME       "doc.file.name"
-#define DOC_PROP_FILE_PATH       "doc.file.path"
 #define DOC_PROP_CODE_BASE       "doc.file.code.base"
 #define DOC_PROP_COVER_FILE      "doc.cover.file"
 

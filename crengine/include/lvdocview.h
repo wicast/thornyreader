@@ -63,8 +63,6 @@ public:
 class LVDocView
 {
 private:
-    LVContainerRef container_;
-    LVContainerRef archive_container_;
     LVPtrVector<CRBookmark> bookmarks_;
     ldomXPointer bookmark_;
     LVScrollInfo scroll_info_;
@@ -214,7 +212,8 @@ public:
     /// clear view
     void Clear();
     /// load document from file
-    bool LoadDoc(int doc_format, const char* crengine_uri);
+    bool LoadDoc(int doc_format, const char* file_name, uint32_t compressed_size,
+                             bool smart_archive);
     LVDocView();
     ~LVDocView();
 };

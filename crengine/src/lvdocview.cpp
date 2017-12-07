@@ -98,12 +98,6 @@ void LVDocView::Clear()
 	if (!stream_.isNull()) {
 		stream_.Clear();
 	}
-	if (!container_.isNull()) {
-		container_.Clear();
-	}
-	if (!archive_container_.isNull()) {
-		archive_container_.Clear();
-	}
 }
 
 void LVDocView::CreateEmptyDom()
@@ -116,7 +110,6 @@ void LVDocView::CreateEmptyDom()
 	cr_dom_->setDocFlag(DOC_FLAG_ENABLE_FOOTNOTES, config_enable_footnotes_);
 	cr_dom_->setDocFlag(DOC_FLAG_EMBEDDED_STYLES, config_embeded_styles_);
 	cr_dom_->setDocFlag(DOC_FLAG_EMBEDDED_FONTS, config_embeded_fonts_);
-	cr_dom_->setDocParentContainer(container_);
 	cr_dom_->setNodeTypes(fb2_elem_table);
 	cr_dom_->setAttributeTypes(fb2_attr_table);
 	cr_dom_->setNameSpaceTypes(fb2_ns_table);
@@ -235,47 +228,99 @@ void LVDocView::Resize(int width, int height)
     }
 }
 
-bool LVDocView::LoadDoc(int doc_format, const char* cr_uri_chars)
+//TODO
+
+static LVStreamRef ThResolveStream(int doc_format, const char* absolute_path_chars,
+                                   uint32_t compressed_size, bool smart_archive)
 {
-    LVStreamRef stream;
-    lString16 cre_uri(cr_uri_chars);
-    lString16 to_archive_path;
-    lString16 in_archive_path;
-    if (LVSplitArcName(cre_uri, to_archive_path, in_archive_path)) {
-        // Doc is inside archive
-        stream = LVOpenFileStream(to_archive_path.c_str(), LVOM_READ);
+    lString16 absolute_path(absolute_path_chars);
+    LVStreamRef stream = LVOpenFileStream(absolute_path.c_str(), LVOM_READ);
+    if (stream.isNull()) {
+        CRLog::error("ThResolveStream open file fail %s", LCSTR(absolute_path));
+        return LVStreamRef();
+    }
+    if (compressed_size > 0) {
+        LVContainerRef container = LVOpenArchive(stream);
+        if (container.isNull()) {
+            CRLog::error("ThResolveStream read archive fail %s", LCSTR(absolute_path));
+            return LVStreamRef();
+        }
+        stream = container->OpenStreamByCompressedSize(compressed_size);
         if (stream.isNull()) {
-            CRLog::error("Cannot open archive file %s", LCSTR(to_archive_path));
-            return false;
+            CRLog::error("ThResolveStream direct archive stream fail %s", LCSTR(absolute_path));
+            return LVStreamRef();
         }
-        container_ = LVOpenArchieve(stream);
-        if (container_.isNull()) {
-            CRLog::error("Cannot read archive contents from %s", LCSTR(to_archive_path));
-            return false;
+    }
+    if (!smart_archive) {
+        return stream;
+    }
+    LVContainerRef container = LVOpenArchive(stream);
+    if (container.isNull()) {
+        CRLog::error("ThResolveStream smart_archive fail %s", LCSTR(absolute_path));
+        return LVStreamRef();
+    }
+    int found_count = 0;
+    lString16 entry_name;
+    for (int i=0; i < container->GetObjectCount(); i++) {
+        const LVContainerItemInfo* item = container->GetObjectInfo(i);
+        if (!item || item->IsContainer()) {
+            continue;
         }
-        stream = container_->OpenStream(in_archive_path.c_str(), LVOM_READ);
-        if (stream.isNull()) {
-            CRLog::error("Cannot open stream to file in archive %s", LCSTR(cre_uri));
-            return false;
+        lString16 name(item->GetName());
+        lString16 name_lowercase = name;
+        name_lowercase.lowercase();
+        if (doc_format == DOC_FORMAT_FB2) {
+            if (name_lowercase.endsWith(".fb2")) {
+                entry_name = name;
+                found_count++;
+            }
+        } else if (doc_format == DOC_FORMAT_RTF) {
+            if (name_lowercase.endsWith(".rtf")) {
+                entry_name = name;
+                found_count++;
+            }
+        } else if (doc_format == DOC_FORMAT_TXT) {
+            if (name_lowercase.endsWith(".txt")) {
+                entry_name = name;
+                found_count++;
+            }
+        } else if (doc_format == DOC_FORMAT_MOBI) {
+            if (name_lowercase.endsWith(".mobi")) {
+                entry_name = name;
+                found_count++;
+            }
+        } else if (doc_format == DOC_FORMAT_DOC) {
+            if (name_lowercase.endsWith(".doc")) {
+                entry_name = name;
+                found_count++;
+            }
+        } else if (doc_format == DOC_FORMAT_CHM) {
+            if (name_lowercase.endsWith(".chm")) {
+                entry_name = name;
+                found_count++;
+            }
+        } else if (doc_format == DOC_FORMAT_EPUB) {
+            if (name_lowercase.endsWith(".epub")) {
+                entry_name = name;
+                found_count++;
+            }
         }
-        doc_props_->setString(DOC_PROP_ARC_NAME, LVExtractFilename(to_archive_path));
-        doc_props_->setString(DOC_PROP_ARC_PATH, LVExtractPath(to_archive_path));
-        doc_props_->setString(DOC_PROP_FILE_NAME, in_archive_path);
+    }
+    if (found_count == 1) {
+        return container->OpenStream(entry_name.c_str(), LVOM_READ);
     } else {
-        lString16 doc_file_name = LVExtractFilename(cre_uri);
-        lString16 path_to_doc = LVExtractPath(cre_uri);
-        container_ = LVOpenDirectory(path_to_doc.c_str());
-        if (container_.isNull()) {
-            CRLog::error("Cannot open dir %s", LCSTR(path_to_doc));
-            return false;
-        }
-        stream = container_->OpenStream(doc_file_name.c_str(), LVOM_READ);
-        if (!stream) {
-            CRLog::error("Cannot open file %s", LCSTR(doc_file_name));
-            return false;
-        }
-        doc_props_->setString(DOC_PROP_FILE_PATH, path_to_doc);
-        doc_props_->setString(DOC_PROP_FILE_NAME, doc_file_name);
+        CRLog::error("ThResolveStream smart_archive collision fail %s %d",
+                     LCSTR(absolute_path), found_count);
+        return LVStreamRef();
+    }
+}
+
+bool LVDocView::LoadDoc(int doc_format, const char* absolute_path,
+                        uint32_t compressed_size, bool smart_archive)
+{
+    LVStreamRef stream = ThResolveStream(doc_format, absolute_path, compressed_size, smart_archive);
+    if (!stream) {
+        return false;
     }
     if (LoadDoc(doc_format, stream)) {
         stream_.Clear();
@@ -304,9 +349,7 @@ bool LVDocView::LoadDoc(int doc_format, LVStreamRef stream)
         if (!ImportEpubDocument(stream_, cr_dom_)) {
             return false;
         }
-        container_ = cr_dom_->getDocParentContainer();
         doc_props_ = cr_dom_->getProps();
-        archive_container_ = cr_dom_->getDocParentContainer();
     } else if (doc_format == DOC_FORMAT_MOBI) {
         doc_format_t pdb_format = doc_format_none;
         if (!DetectPDBFormat(stream_, pdb_format)) {
@@ -331,7 +374,6 @@ bool LVDocView::LoadDoc(int doc_format, LVStreamRef stream)
         if (!ImportWordDocument(stream_, cr_dom_)) {
             return false;
         }
-        archive_container_ = cr_dom_->getDocParentContainer();
 #endif //ENABLE_ANTIWORD == 1
     } else if (doc_format == DOC_FORMAT_RTF) {
         LvDomWriter writer(cr_dom_);
@@ -344,7 +386,6 @@ bool LVDocView::LoadDoc(int doc_format, LVStreamRef stream)
         if (!ImportCHMDocument(stream_, cr_dom_)) {
             return false;
         }
-        archive_container_ = cr_dom_->getDocParentContainer();
     } else if (doc_format == DOC_FORMAT_TXT) {
         LvDomWriter writer(cr_dom_);
         parser = new LVTextParser(stream_, &writer, config_txt_smart_format_);
@@ -1765,41 +1806,35 @@ ldomWordEx* LVPageWordSelector::ReducePattern()
     return res;
 }
 
+//TODO
+
 void CreBridge::processMetadata(CmdRequest& request, CmdResponse& response)
 {
     response.cmd = CMD_RES_CRE_METADATA;
     CmdDataIterator iter(request.first);
     uint32_t doc_format = 0;
-    uint8_t* cre_uri_chars;
-    iter.getInt(&doc_format).getByteArray(&cre_uri_chars);
+    uint8_t* absolute_path_arg;
+    uint32_t compressed_size = 0;
+    uint32_t smart_archive_arg = 0;
+    iter.getInt(&doc_format)
+            .getByteArray(&absolute_path_arg)
+            .getInt(&compressed_size)
+            .getInt(&smart_archive_arg);
     if (!iter.isValid()) {
         CRLog::error("processMetadata: iterator invalid data");
         response.result = RES_BAD_REQ_DATA;
         return;
     }
-    lString16 cre_uri(reinterpret_cast<const char*>(cre_uri_chars));
-    lString16 to_archive_path;
-    lString16 in_archive_path;
-    bool in_zip = LVSplitArcName(cre_uri, to_archive_path, in_archive_path);
-    LVStreamRef stream = LVOpenFileStream((in_zip ? to_archive_path : cre_uri).c_str(), LVOM_READ);
+    const char* absolute_path = reinterpret_cast<const char*>(absolute_path_arg);
+    bool smart_archive = (bool) smart_archive_arg;
+    LVStreamRef stream = ThResolveStream(doc_format, absolute_path, compressed_size, smart_archive);
     if (!stream) {
-        CRLog::error("processMetadata: cannot open file");
-        response.result = RES_BAD_REQ_DATA;
+        if (compressed_size > 0) {
+            response.result = RES_ARCHIVE_COLLISION;
+        } else {
+            response.result = RES_INTERNAL_ERROR;
+        }
         return;
-    }
-    if (in_zip) {
-        LVContainerRef container = LVOpenArchieve(stream);
-        if (container.isNull()) {
-            CRLog::error("processMetadata: cannot open archive container");
-            response.result = RES_BAD_REQ_DATA;
-            return;
-        }
-        stream = container->OpenStream(in_archive_path.c_str(), LVOM_READ);
-        if (stream.isNull()) {
-            CRLog::error("processMetadata: cannot open file from archive container");
-            response.result = RES_BAD_REQ_DATA;
-            return;
-        }
     }
 
     LVStreamRef thumb_stream;
@@ -1810,18 +1845,18 @@ void CreBridge::processMetadata(CmdRequest& request, CmdResponse& response)
     lString16 lang;
 
     if (doc_format == DOC_FORMAT_EPUB) {
-        LVContainerRef container = LVOpenArchieve(stream);
+        LVContainerRef container = LVOpenArchive(stream);
         // Check is this a ZIP archive
         if (container.isNull()) {
             CRLog::error("processMetadata: EPUB container.isNull()");
-            response.result = RES_BAD_REQ_DATA;
+            response.result = RES_INTERNAL_ERROR;
             return;
         }
         // Check root media type
         lString16 root_file_path = EpubGetRootFilePath(container);
         if (root_file_path.empty()) {
             CRLog::error("processMetadata: malformed EPUB");
-            response.result = RES_BAD_REQ_DATA;
+            response.result = RES_INTERNAL_ERROR;
             return;
         }
         EncryptedDataContainer* decryptor = new EncryptedDataContainer(container);
@@ -1833,13 +1868,13 @@ void CreBridge::processMetadata(CmdRequest& request, CmdResponse& response)
         LVStreamRef content_stream = container->OpenStream(root_file_path.c_str(), LVOM_READ);
         if (content_stream.isNull()) {
             CRLog::error("processMetadata: malformed EPUB");
-            response.result = RES_BAD_REQ_DATA;
+            response.result = RES_INTERNAL_ERROR;
             return;
         }
         CrDom* dom = LVParseXMLStream(content_stream);
         if (!dom) {
             CRLog::error("processMetadata: malformed EPUB");
-            response.result = RES_BAD_REQ_DATA;
+            response.result = RES_INTERNAL_ERROR;
             return;
         }
         lString16 thumb_id;

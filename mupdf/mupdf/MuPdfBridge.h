@@ -28,12 +28,6 @@ extern "C" {
 #define FORMAT_PDF 1
 #define FORMAT_XPS 2
 
-#define RES_MUPDF_PAGE_CAN_NOT_BE_RENDERED      250
-#define RES_MUPDF_PWD_WRONG 					251
-#define RES_MUPDF_PWD_NEED  					252
-#define RES_MUPDF_OOM       					253
-#define RES_MUPDF_FAIL      					254
-
 #include "StBridge.h"
 
 class MuPdfBridge : public StBridge

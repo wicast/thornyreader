@@ -15,7 +15,8 @@ struct crChmExternalFileStream : public chmExternalFileStream {
         return (LONGINT64)((crChmExternalFileStream*)instance)->stream->GetSize();
     }
     /** reads bytes to buffer */
-    static LONGINT64 cr_read( chmExternalFileStream * instance, unsigned char * buf, LONGUINT64 pos, LONGINT64 len )
+    static LONGINT64 cr_read( chmExternalFileStream * instance, unsigned char * buf,
+                              LONGUINT64 pos, LONGINT64 len )
     {
         lvsize_t bytesRead = 0;
         if ( ((crChmExternalFileStream*)instance)->stream->SetPos( (lvpos_t)pos )!= pos )
@@ -188,6 +189,10 @@ public:
         stream = p;
         stream->SetName( fname );
         return stream;
+    }
+    virtual LVStreamRef OpenStreamByCompressedSize(uint32_t size)
+    {
+        return LVStreamRef();
     }
     virtual LVContainer * GetParentContainer()
     {
@@ -521,7 +526,10 @@ class CHMUrlTable {
     CHMUrlStr * _strings;
 
 
-    CHMUrlTable( LVContainerRef container, LVStreamRef stream ) : _container(container), _reader(stream), _strings(NULL)
+    CHMUrlTable( LVContainerRef container, LVStreamRef stream )
+            : _container(container),
+              _reader(stream),
+              _strings(NULL)
     {
 
     }
@@ -541,7 +549,8 @@ class CHMUrlTable {
             item->id = readInt32(data);
             item->topicsIndex = readInt32(data);
             item->urlStrOffset = readInt32(data);
-            //CRLog::trace("urltbl[offs=%x, id=%x, ti=%x, urloffs=%x]", item->offset, item->id, item->topicsIndex, item->urlStrOffset);
+            //CRLog::trace("urltbl[offs=%x, id=%x, ti=%x, urloffs=%x]",
+            // item->offset, item->id, item->topicsIndex, item->urlStrOffset);
             _table.add( item );
             offset += 4*3;
             size -= 4*3;
@@ -737,7 +746,8 @@ class CHMSystem {
                         }
                         const lChar16 * table = GetCharsetByte2UnicodeTable( cpname );
                         if ( cpname!=NULL && table!=NULL ) {
-                            CRLog::info("CHM charset detected from default font: %s", LCSTR(lString16(cpname)));
+                            CRLog::info("CHM charset detected from default font: %s",
+                                        LCSTR(lString16(cpname)));
                             _enc_table = table;
                             _enc_name = lString16(cpname);
                         }
@@ -764,7 +774,8 @@ class CHMSystem {
         }
 
         if ( err ) {
-            CRLog::error("CHM decoding error: %d blocks decoded, stream bytes left=%d", count, _reader.bytesLeft() );
+            CRLog::error("CHM decoding error: %d blocks decoded, stream bytes left=%d",
+                         count, _reader.bytesLeft() );
             return false;
         }
         if ( _enc_table==NULL ) {
@@ -1036,7 +1047,8 @@ public:
         }
     }
 
-    bool init( LVContainerRef cont, lString16 hhcName, lString16 defEncodingName, lString16Collection & urlList, lString16 mainPageName )
+    bool init( LVContainerRef cont, lString16 hhcName, lString16 defEncodingName,
+               lString16Collection & urlList, lString16 mainPageName )
     {
         if ( hhcName.empty() && urlList.length()==0 ) {
             lString16Collection htms;

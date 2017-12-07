@@ -8232,6 +8232,7 @@ LVStreamRef CrDom::getObjectImageStream( lString16 refName )
             if ( !getCodeBase().empty() )
                 name = getCodeBase() + refName;
             ref = getDocParentContainer()->OpenStream(name.c_str(), LVOM_READ);
+            /*
             if ( ref.isNull() ) {
                 lString16 fname = getProps()->getStringDef( DOC_PROP_FILE_NAME, "" );
                 fname = LVExtractFilenameWithoutExtension(fname);
@@ -8243,8 +8244,10 @@ LVStreamRef CrDom::getObjectImageStream( lString16 refName )
                     ref = getDocParentContainer()->OpenStream(name.c_str(), LVOM_READ);
                 }
             }
-            if ( ref.isNull() )
+            */
+            if ( ref.isNull() ) {
                 CRLog::error("Cannot open stream by name %s", LCSTR(name));
+            }
         }
         return ref;
     }

@@ -346,7 +346,10 @@ public:
         }
         return LVStreamRef();
     }
-
+    virtual LVStreamRef OpenStreamByCompressedSize(uint32_t size)
+    {
+        return LVStreamRef();
+    }
     void setStream( LVStreamRef stream ) {
         _stream = stream;
     }

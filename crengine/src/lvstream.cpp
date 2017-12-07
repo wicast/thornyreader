@@ -38,10 +38,7 @@ extern "C" {
 #include <windows.h>
 }
 #else
-#include <sys/types.h>
-#include <sys/stat.h>
 #include <dirent.h>
-#include <unistd.h>
 #include <fcntl.h>
 #include <sys/mman.h>
 #endif
@@ -62,28 +59,12 @@ extern "C" {
 #endif
 #endif
 
-// zlib stream decode cache size, used to avoid restart
-// of decoding from beginning to move back
+// zlib stream decode cache size, used to avoid restart of decoding from beginning to move back
 // 0x80000 (_WIN32, LBOOK), 0x40000 (LINUX)
 #define ZIP_STREAM_BUFFER_SIZE 0x80000
 // document stream buffer size
 // 0x40000 (_WIN32, LBOOK), 0x20000 (LINUX)
 #define FILE_STREAM_BUFFER_SIZE 0x40000
-
-static LVAssetContainerFactory * _assetContainerFactory = NULL;
-
-/// set container to handle filesystem access for paths started with ASSET_PATH_PREFIX (@ sign)
-void LVSetAssetContainerFactory(LVAssetContainerFactory * asset) {
-	_assetContainerFactory = asset;
-}
-
-lString16 LVExtractAssetPath(lString16 fn) {
-	if (fn.length() < 2 || fn[0] != ASSET_PATH_PREFIX)
-		return lString16();
-	if (fn[1] == '/' || fn[1] == '\\')
-		return fn.substr(2);
-	return fn.substr(1);
-}
 
 // LVStorageObject stubs
 const lChar16* LVStorageObject::GetName()
@@ -852,11 +833,8 @@ class LVFileStream : public LVNamedStream
 private:
     FILE * m_file;
 public:
-
-
     virtual lverror_t Seek( lvoffset_t offset, lvseek_origin_t origin, lvpos_t * pNewPos )
     {
-       //
        int res = -1;
        switch ( origin )
        {
@@ -1352,32 +1330,12 @@ public:
 };
 #endif
 
-/// split full path name into archive name and file name inside archive using separator "@/" or "@\"
-bool LVSplitArcName(lString16 fullPathName, lString16& arcPathName, lString16& arcItemPathName)
-{
-    int p = fullPathName.pos("@/");
-    if (p < 0)
-        p = fullPathName.pos("@\\");
-    if (p < 0)
-        return false;
-    arcPathName = fullPathName.substr(0, p);
-    arcItemPathName = fullPathName.substr(p + 2);
-    return !arcPathName.empty() && !arcItemPathName.empty();
-}
-
 // facility functions
 LVStreamRef LVOpenFileStream(const lChar16* pathname, int mode)
 {
     lString16 fn(pathname);
-    if (fn.length() > 1 && fn[0] == ASSET_PATH_PREFIX) {
-    	if (!_assetContainerFactory || mode != LVOM_READ)
-    		return LVStreamRef();
-    	lString16 assetPath = LVExtractAssetPath(fn);
-    	return _assetContainerFactory->openAssetStream(assetPath);
-    }
     LVFileStream* stream = LVFileStream::CreateFileStream(lString16(pathname), (lvopen_mode_t) mode);
-    if (stream != NULL)
-    {
+    if (stream != NULL) {
         return LVStreamRef(stream);
     }
     return LVStreamRef();
@@ -1388,7 +1346,6 @@ LVStreamRef LVOpenFileStream( const lChar8 * pathname, int mode )
     lString16 fn = Utf8ToUnicode(lString8(pathname));
     return LVOpenFileStream( fn.c_str(), mode );
 }
-
 
 lvopen_mode_t LVTextStream::GetMode()
 {
@@ -1462,11 +1419,6 @@ public:
         // make filename
         lString16 fn = m_fname;
         fn << fname;
-        /*
-        printf("Opening directory container file %s : %s fname=%s path=%s\n",
-                UnicodeToUtf8( lString16(fname) ).c_str(), UnicodeToUtf8( fn ).c_str(),
-                UnicodeToUtf8( m_fname ).c_str(), UnicodeToUtf8( m_path ).c_str());
-        */
         LVStreamRef stream( LVOpenFileStream( fn.c_str(), mode ) );
         if (!stream) {
             return stream;
@@ -1480,6 +1432,10 @@ public:
             Add(item);
         }
         return stream;
+    }
+    virtual LVStreamRef OpenStreamByCompressedSize(uint32_t size)
+    {
+        return LVStreamRef();
     }
     virtual LVContainer * GetParentContainer()
     {
@@ -2070,7 +2026,6 @@ struct ZipHd2
     lUInt32     getOffset() { return _Attr_and_Offset[3] | ((lUInt32)_Attr_and_Offset[4]<<16); }
     void byteOrderConv()
     {
-        //
         lvByteOrderConv cnv;
         if ( cnv.msf() )
         {
@@ -2116,7 +2071,6 @@ private:
     lUInt8 *    m_outbuf;
     lUInt32     m_CRC;
     lUInt32     m_originalCRC;
-
 
     LVZipDecodeStream( LVStreamRef stream, lvsize_t start, lvsize_t packsize, lvsize_t unpacksize, lUInt32 crc )
         : m_stream(stream), m_start(start), m_packsize(packsize), m_unpacksize(unpacksize),
@@ -2336,14 +2290,12 @@ private:
         return bytesRead;
     }
 public:
-
     /// fastly return already known CRC
     virtual lverror_t getcrc32( lUInt32 & dst )
     {
         dst = m_originalCRC;
         return LVERR_OK;
     }
-
     virtual bool Eof()
     {
         return m_outbytesleft==0; //m_pos >= m_size;
@@ -2494,8 +2446,39 @@ public:
         if (!stream.isNull()) {
             stream->SetName(m_list[found_index]->GetName());
             return stream;
-            // Use buffering?
-            //return LVCreateBufferedStream( stream, ZIP_STREAM_BUFFER_SIZE );
+            // Use buffering? return LVCreateBufferedStream( stream, ZIP_STREAM_BUFFER_SIZE );
+        }
+        return stream;
+    }
+    virtual LVStreamRef OpenStreamByCompressedSize(uint32_t size)
+    {
+        int found_index = -1;
+        int found_count = 0;
+        for (int i = 0; i < m_list.length(); i++) {
+            if (m_list[i]->GetSrcSize() == size) {
+                if (m_list[i]->IsContainer()) {
+                    return LVStreamRef();
+                }
+                found_index = i;
+                found_count++;
+            }
+        }
+        if (found_count == 0 || found_count > 1) {
+            CRLog::error("OpenStreamByCompressedSize found_count=%d", found_count);
+            return LVStreamRef();
+        }
+        LVStreamRef strm = m_stream; // fix strange arm-linux-g++ bug
+        LVStreamRef stream(
+                LVZipDecodeStream::Create(strm,
+                        m_list[found_index]->GetSrcPos(),
+                        m_list[found_index]->GetName(),
+                        m_list[found_index]->GetSrcSize(),
+                        m_list[found_index]->GetSize())
+        );
+        if (!stream.isNull()) {
+            stream->SetName(m_list[found_index]->GetName());
+            return stream;
+            // Use buffering? return LVCreateBufferedStream( stream, ZIP_STREAM_BUFFER_SIZE );
         }
         return stream;
     }
@@ -2668,7 +2651,6 @@ public:
         int sz2 = m_list.length();
         return sz2;
     }
-
     static LVArcContainerBase * OpenArchieve( LVStreamRef stream )
     {
         // read beginning of file
@@ -2691,7 +2673,6 @@ public:
         }
         return arc;
     }
-
 };
 #if (USE_UNRAR==1)
 class LVRarArc : public LVArcContainerBase
@@ -2852,7 +2833,6 @@ public:
             m_size = m_pos;
         return m_size;
     }
-
     virtual lverror_t GetSize( lvsize_t * pSize )
 	{
 		if (!m_pBuffer || !pSize)
@@ -2981,8 +2961,6 @@ public:
 		m_mode = mode;
 		return LVERR_OK;
 	}
-
-
 	lverror_t CreateCopy(const lUInt8 * pBuf, lvsize_t size, lvopen_mode_t mode)
 	{
 		Close();
@@ -3020,7 +2998,6 @@ public:
 			  m_size(0),
 			  m_pos(0)
 	{}
-
 	virtual ~LVMemoryStream()
 	{
 		Close();
@@ -3028,24 +3005,23 @@ public:
 	}
 };
 
-LVContainerRef LVOpenArchieve( LVStreamRef stream )
+LVContainerRef LVOpenArchive(LVStreamRef stream)
 {
+    // Try ZIP, if fails, try RAR, if fails return null ref
     LVContainerRef ref;
-    if (stream.isNull())
+    if (stream.isNull()) {
         return ref;
-
-    // try ZIP
-    ref = LVZipArc::OpenArchieve( stream );
-    if (!ref.isNull())
+    }
+    ref = LVZipArc::OpenArchieve(stream);
+    if (!ref.isNull()) {
         return ref;
-
+    }
 #if USE_UNRAR==1
-    // try RAR
-    ref = LVRarArc::OpenArchieve( stream );
-    if (!ref.isNull())
+    ref = LVRarArc::OpenArchieve(stream);
+    if (!ref.isNull()) {
         return ref;
+    }
 #endif
-    // not found: return null ref
     return ref;
 }
 
@@ -3152,12 +3128,6 @@ LVContainerRef LVOpenDirectory(const lString8& path, const wchar_t * mask) {
 LVContainerRef LVOpenDirectory( const wchar_t * path, const wchar_t * mask )
 {
 	lString16 pathname(path);
-    if (pathname.length() > 1 && pathname[0] == ASSET_PATH_PREFIX) {
-    	if (!_assetContainerFactory)
-    		return LVContainerRef();
-    	lString16 assetPath = LVExtractAssetPath(pathname);
-    	return _assetContainerFactory->openAssetContainer(assetPath);
-    }
     LVContainerRef dir(LVDirectoryContainer::OpenDirectory(path, mask));
     return dir;
 }
@@ -3255,7 +3225,7 @@ lString16 LVExtractFirstPathElement( lString16 & pathName )
 /// appends path delimiter character to end of path, if absent
 void LVAppendPathDelimiter( lString16 & pathName )
 {
-    if ( pathName.empty() || (pathName.length() == 1 && pathName[0] == ASSET_PATH_PREFIX))
+    if ( pathName.empty())
         return;
     lChar16 delim = LVDetectPathDelimiter( pathName );
     if ( pathName[pathName.length()-1]!=delim )
@@ -3265,7 +3235,7 @@ void LVAppendPathDelimiter( lString16 & pathName )
 /// appends path delimiter character to end of path, if absent
 void LVAppendPathDelimiter( lString8 & pathName )
 {
-    if ( pathName.empty() || (pathName.length() == 1 && pathName[0] == ASSET_PATH_PREFIX))
+    if ( pathName.empty())
         return;
     lChar8 delim = LVDetectPathDelimiter(pathName);
     if ( pathName[pathName.length()-1]!=delim )
@@ -3274,7 +3244,7 @@ void LVAppendPathDelimiter( lString8 & pathName )
 
 /// removes path delimiter from end of path, if present
 void LVRemoveLastPathDelimiter( lString16 & pathName ) {
-    if (pathName.empty() || (pathName.length() == 1 && pathName[0] == ASSET_PATH_PREFIX))
+    if (pathName.empty())
         return;
     if (pathName.endsWith("/") || pathName.endsWith("\\"))
         pathName = pathName.substr(0, pathName.length() - 1);
@@ -3283,7 +3253,7 @@ void LVRemoveLastPathDelimiter( lString16 & pathName ) {
 /// removes path delimiter from end of path, if present
 void LVRemoveLastPathDelimiter( lString8 & pathName )
 {
-    if (pathName.empty() || (pathName.length() == 1 && pathName[0] == ASSET_PATH_PREFIX))
+    if (pathName.empty())
         return;
     if (pathName.endsWith("/") || pathName.endsWith("\\"))
         pathName = pathName.substr(0, pathName.length() - 1);
@@ -3353,7 +3323,6 @@ lString16 LVCombinePaths( lString16 basePath, lString16 newPath )
         s.erase(0, 2);
     return s;
 }
-
 
 /// removes last path part from pathname and returns it
 lString16 LVExtractLastPathElement( lString16 & pathName )
@@ -3454,19 +3423,13 @@ bool LVFileExists( const lString8 & pathName ) {
 bool LVFileExists( const lString16 & pathName )
 {
     lString16 fn(pathName);
-    if (fn.length() > 1 && fn[0] == ASSET_PATH_PREFIX) {
-    	if (!_assetContainerFactory)
-    		return false;
-    	lString16 assetPath = LVExtractAssetPath(fn);
-    	return !_assetContainerFactory->openAssetStream(assetPath).isNull();
-    }
 #ifdef _WIN32
 	LVStreamRef stream = LVOpenFileStream( pathName.c_str(), LVOM_READ );
 	return !stream.isNull();
 #else
-    FILE * f = fopen(UnicodeToUtf8(pathName).c_str(), "rb");
-    if ( f ) {
-        fclose( f );
+    FILE* f = fopen(UnicodeToUtf8(pathName).c_str(), "rb");
+    if (f) {
+        fclose(f);
         return true;
     }
     return false;
@@ -3499,12 +3462,6 @@ bool LVDirectoryIsWritable(const lString16 & pathName) {
 bool LVDirectoryExists( const lString16 & pathName )
 {
     lString16 fn(pathName);
-    if (fn.length() > 1 && fn[0] == ASSET_PATH_PREFIX) {
-    	if (!_assetContainerFactory)
-    		return false;
-    	lString16 assetPath = LVExtractAssetPath(fn);
-    	return !_assetContainerFactory->openAssetContainer(assetPath).isNull();
-    }
     LVContainerRef dir = LVOpenDirectory( pathName.c_str() );
     return !dir.isNull();
 }
@@ -3513,12 +3470,6 @@ bool LVDirectoryExists( const lString16 & pathName )
 bool LVDirectoryExists( const lString8 & pathName )
 {
     lString16 fn(Utf8ToUnicode(pathName));
-    if (fn.length() > 1 && fn[0] == ASSET_PATH_PREFIX) {
-    	if (!_assetContainerFactory)
-    		return false;
-    	lString16 assetPath = LVExtractAssetPath(fn);
-    	return !_assetContainerFactory->openAssetContainer(assetPath).isNull();
-    }
     LVContainerRef dir = LVOpenDirectory(fn);
     return !dir.isNull();
 }
@@ -3530,10 +3481,6 @@ bool LVCreateDirectory( lString16 path )
     //LVRemovePathDelimiter(path);
     if ( path.length() <= 1 )
         return false;
-    if (path[0] == ASSET_PATH_PREFIX) {
-    	// cannot create directory in asset
-    	return false;
-    }
     LVContainerRef dir = LVOpenDirectory( path.c_str() );
     if ( dir.isNull() ) {
         CRLog::trace("Directory %s not found", UnicodeToUtf8(path).c_str());
