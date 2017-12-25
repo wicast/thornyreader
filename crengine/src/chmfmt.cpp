@@ -190,7 +190,7 @@ public:
         stream->SetName( fname );
         return stream;
     }
-    virtual LVStreamRef OpenStreamByCompressedSize(uint32_t size)
+    virtual LVStreamRef OpenStreamByPackedSize(uint32_t size)
     {
         return LVStreamRef();
     }

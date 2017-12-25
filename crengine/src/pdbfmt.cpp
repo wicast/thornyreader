@@ -346,7 +346,7 @@ public:
         }
         return LVStreamRef();
     }
-    virtual LVStreamRef OpenStreamByCompressedSize(uint32_t size)
+    virtual LVStreamRef OpenStreamByPackedSize(uint32_t size)
     {
         return LVStreamRef();
     }
@@ -1070,7 +1070,7 @@ bool isCorrectUtf8Text(LVStreamRef& stream)
     return res != 0;
 }
 
-LVStreamRef GetPDBCoverpage(LVStreamRef stream)
+LVStreamRef GetMOBICover(LVStreamRef stream)
 {
     doc_format_t contentFormat = doc_format_none;
     PDBFile* pdb = new PDBFile();
@@ -1095,7 +1095,7 @@ LVStreamRef GetPDBCoverpage(LVStreamRef stream)
     return LVStreamRef();
 }
 
-bool ImportPDBDocument(LVStreamRef& stream, CrDom* doc, doc_format_t& doc_format)
+bool ImportMOBIDoc(LVStreamRef& stream, CrDom* doc, doc_format_t& doc_format)
 {
     PDBFile* pdb = new PDBFile();
     LVPDBContainer* container = new LVPDBContainer();
@@ -1157,7 +1157,7 @@ bool ImportPDBDocument(LVStreamRef& stream, CrDom* doc, doc_format_t& doc_format
 //    return LVStreamRef();
 //}
 
-bool DetectPDBFormat(LVStreamRef stream, doc_format_t& contentFormat)
+bool DetectMOBIFormat(LVStreamRef stream, doc_format_t& contentFormat)
 {
     PDBFile pdb;
     if (!pdb.open(stream, NULL, false, contentFormat))

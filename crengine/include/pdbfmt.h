@@ -3,8 +3,8 @@
 
 #include "lvtinydom.h"
 
-bool DetectPDBFormat(LVStreamRef stream, doc_format_t& contentFormat);
-bool ImportPDBDocument(LVStreamRef& stream, CrDom* doc, doc_format_t& doc_format);
-LVStreamRef GetPDBCoverpage(LVStreamRef stream);
+bool DetectMOBIFormat(LVStreamRef stream, doc_format_t& contentFormat);
+bool ImportMOBIDoc(LVStreamRef& stream, CrDom* doc, doc_format_t& doc_format);
+LVStreamRef GetMOBICover(LVStreamRef stream);
 
 #endif // PDBFMT_H

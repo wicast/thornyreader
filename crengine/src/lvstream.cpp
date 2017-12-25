@@ -1433,7 +1433,7 @@ public:
         }
         return stream;
     }
-    virtual LVStreamRef OpenStreamByCompressedSize(uint32_t size)
+    virtual LVStreamRef OpenStreamByPackedSize(uint32_t size)
     {
         return LVStreamRef();
     }
@@ -2450,7 +2450,7 @@ public:
         }
         return stream;
     }
-    virtual LVStreamRef OpenStreamByCompressedSize(uint32_t size)
+    virtual LVStreamRef OpenStreamByPackedSize(uint32_t size)
     {
         int found_index = -1;
         int found_count = 0;
@@ -2464,17 +2464,15 @@ public:
             }
         }
         if (found_count == 0 || found_count > 1) {
-            CRLog::error("OpenStreamByCompressedSize found_count=%d", found_count);
+            CRLog::error("OpenStreamByPackedSize found_count=%d", found_count);
             return LVStreamRef();
         }
         LVStreamRef strm = m_stream; // fix strange arm-linux-g++ bug
-        LVStreamRef stream(
-                LVZipDecodeStream::Create(strm,
+        LVStreamRef stream(LVZipDecodeStream::Create(strm,
                         m_list[found_index]->GetSrcPos(),
                         m_list[found_index]->GetName(),
                         m_list[found_index]->GetSrcSize(),
-                        m_list[found_index]->GetSize())
-        );
+                        m_list[found_index]->GetSize()));
         if (!stream.isNull()) {
             stream->SetName(m_list[found_index]->GetName());
             return stream;

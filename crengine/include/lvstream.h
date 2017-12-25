@@ -520,7 +520,7 @@ public:
     virtual const LVContainerItemInfo * operator [] (int index) { return GetObjectInfo(index); }
     virtual int GetObjectCount() const = 0;
     virtual LVStreamRef OpenStream( const lChar16 * fname, lvopen_mode_t mode ) = 0;
-    virtual LVStreamRef OpenStreamByCompressedSize(uint32_t size) = 0;
+    virtual LVStreamRef OpenStreamByPackedSize(uint32_t size) = 0;
     LVContainer() {}
     virtual ~LVContainer() { }
 };

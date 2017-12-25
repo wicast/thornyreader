@@ -266,7 +266,7 @@ LVStreamRef EncryptedDataContainer::OpenStream(const lChar16 * fname, lvopen_mod
 		return LVStreamRef(new FontDemanglingStream(res, _fontManglingKey));
 	return res;
 }
-LVStreamRef EncryptedDataContainer::OpenStreamByCompressedSize(uint32_t size)
+LVStreamRef EncryptedDataContainer::OpenStreamByPackedSize(uint32_t size)
 {
     return LVStreamRef();
 }

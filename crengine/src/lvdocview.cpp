@@ -231,7 +231,7 @@ void LVDocView::Resize(int width, int height)
 //TODO
 
 static LVStreamRef ThResolveStream(int doc_format, const char* absolute_path_chars,
-                                   uint32_t compressed_size, bool smart_archive)
+                                   uint32_t packed_size, bool smart_archive)
 {
     lString16 absolute_path(absolute_path_chars);
     LVStreamRef stream = LVOpenFileStream(absolute_path.c_str(), LVOM_READ);
@@ -239,13 +239,13 @@ static LVStreamRef ThResolveStream(int doc_format, const char* absolute_path_cha
         CRLog::error("ThResolveStream open file fail %s", LCSTR(absolute_path));
         return LVStreamRef();
     }
-    if (compressed_size > 0) {
+    if (packed_size > 0) {
         LVContainerRef container = LVOpenArchive(stream);
         if (container.isNull()) {
             CRLog::error("ThResolveStream read archive fail %s", LCSTR(absolute_path));
             return LVStreamRef();
         }
-        stream = container->OpenStreamByCompressedSize(compressed_size);
+        stream = container->OpenStreamByPackedSize(packed_size);
         if (stream.isNull()) {
             CRLog::error("ThResolveStream direct archive stream fail %s", LCSTR(absolute_path));
             return LVStreamRef();
@@ -352,14 +352,14 @@ bool LVDocView::LoadDoc(int doc_format, LVStreamRef stream)
         doc_props_ = cr_dom_->getProps();
     } else if (doc_format == DOC_FORMAT_MOBI) {
         doc_format_t pdb_format = doc_format_none;
-        if (!DetectPDBFormat(stream_, pdb_format)) {
+        if (!DetectMOBIFormat(stream_, pdb_format)) {
             return false;
         }
         cr_dom_->setProps(doc_props_);
         if (pdb_format != doc_format_mobi) {
             CRLog::error("pdb_format != doc_format_mobi");
         }
-        if (!ImportPDBDocument(stream_, cr_dom_, pdb_format)) {
+        if (!ImportMOBIDoc(stream_, cr_dom_, pdb_format)) {
             if (pdb_format != doc_format_mobi) {
                 CRLog::error("pdb_format != doc_format_mobi");
             }
@@ -1814,11 +1814,11 @@ void CreBridge::processMetadata(CmdRequest& request, CmdResponse& response)
     CmdDataIterator iter(request.first);
     uint32_t doc_format = 0;
     uint8_t* absolute_path_arg;
-    uint32_t compressed_size = 0;
+    uint32_t packed_size = 0;
     uint32_t smart_archive_arg = 0;
     iter.getInt(&doc_format)
             .getByteArray(&absolute_path_arg)
-            .getInt(&compressed_size)
+            .getInt(&packed_size)
             .getInt(&smart_archive_arg);
     if (!iter.isValid()) {
         CRLog::error("processMetadata: iterator invalid data");
@@ -1827,9 +1827,9 @@ void CreBridge::processMetadata(CmdRequest& request, CmdResponse& response)
     }
     const char* absolute_path = reinterpret_cast<const char*>(absolute_path_arg);
     bool smart_archive = (bool) smart_archive_arg;
-    LVStreamRef stream = ThResolveStream(doc_format, absolute_path, compressed_size, smart_archive);
+    LVStreamRef stream = ThResolveStream(doc_format, absolute_path, packed_size, smart_archive);
     if (!stream) {
-        if (compressed_size > 0) {
+        if (packed_size > 0) {
             response.result = RES_ARCHIVE_COLLISION;
         } else {
             response.result = RES_INTERNAL_ERROR;
@@ -1846,9 +1846,8 @@ void CreBridge::processMetadata(CmdRequest& request, CmdResponse& response)
 
     if (doc_format == DOC_FORMAT_EPUB) {
         LVContainerRef container = LVOpenArchive(stream);
-        // Check is this a ZIP archive
         if (container.isNull()) {
-            CRLog::error("processMetadata: EPUB container.isNull()");
+            CRLog::error("processMetadata: EPUB is not in ZIP");
             response.result = RES_INTERNAL_ERROR;
             return;
         }
@@ -1927,7 +1926,7 @@ void CreBridge::processMetadata(CmdRequest& request, CmdResponse& response)
         if (doc_format == DOC_FORMAT_FB2) {
             thumb_stream = GetFB2Coverpage(stream);
         } else {
-            thumb_stream = GetPDBCoverpage(stream);
+            thumb_stream = GetMOBICover(stream);
         }
         CrDom dom;
         LvDomWriter writer(&dom, true);
@@ -1940,9 +1939,12 @@ void CreBridge::processMetadata(CmdRequest& request, CmdResponse& response)
             title = ExtractDocTitle(&dom);
             lang = ExtractDocLanguage(&dom);
             series = ExtractDocSeries(&dom, &series_number);
+        } else {
+            CRLog::error("processMetadata: !parser.CheckFormat() || !parser.Parse()");
+            response.result = RES_INTERNAL_ERROR;
+            return;
         }
     }
-
     CmdData* doc_thumb = new CmdData();
     int thumb_width = 0;
     int thumb_height = 0;
