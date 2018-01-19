@@ -12,6 +12,14 @@
     See LICENSE file for details.
 
 */
+#include <stdlib.h>
+#include "include/lvxml.h"
+#include "include/hyphman.h"
+#include "include/lvfnt.h"
+
+#define WORD_LENGTH 2048
+#define MAX_PATTERN_SIZE  9
+#define PATTERN_HASH_SIZE 16384
 
 // set to 1 for debug dump
 #if 0
@@ -22,19 +30,9 @@
 #define DUMP_PATTERNS 0
 #endif
 
-#include <stdlib.h>
-#include "include/lvxml.h"
-#include "include/hyphman.h"
-#include "include/lvfnt.h"
+HyphDictionary* HyphMan::_selectedDictionary = NULL;
+HyphDictionaryList* HyphMan::_dictList = NULL;
 
-#define _16(x) lString16(x)
-
-HyphDictionary * HyphMan::_selectedDictionary = NULL;
-
-HyphDictionaryList * HyphMan::_dictList = NULL;
-
-#define MAX_PATTERN_SIZE  9
-#define PATTERN_HASH_SIZE 16384
 class TexPattern;
 class TexHyph : public HyphMethod
 {
@@ -42,7 +40,8 @@ class TexHyph : public HyphMethod
     lUInt32 _hash;
 public:
     bool match( const lChar16 * str, char * mask );
-    virtual bool hyphenate( const lChar16 * str, int len, lUInt16 * widths, lUInt8 * flags, lUInt16 hyphCharWidth, lUInt16 maxWidth );
+    virtual bool hyphenate(const lChar16* str, int len, lUInt16* widths, lUInt8* flags,
+                           lUInt16 hyphCharWidth, lUInt16 maxWidth);
     void addPattern( TexPattern * pattern );
     TexHyph();
     virtual ~TexHyph();
@@ -54,16 +53,17 @@ public:
 class AlgoHyph : public HyphMethod
 {
 public:
-    virtual bool hyphenate( const lChar16 * str, int len, lUInt16 * widths, lUInt8 * flags, lUInt16 hyphCharWidth, lUInt16 maxWidth );
+    virtual bool hyphenate(const lChar16* str, int len, lUInt16* widths, lUInt8* flags,
+                           lUInt16 hyphCharWidth, lUInt16 maxWidth);
     virtual ~AlgoHyph();
 };
 
 class NoHyph : public HyphMethod
 {
 public:
-    virtual bool hyphenate( const lChar16 * str, int len, lUInt16 * widths, lUInt8 * flags, lUInt16 hyphCharWidth, lUInt16 maxWidth )
+    virtual bool hyphenate(const lChar16* str, int len, lUInt16* widths, lUInt8* flags,
+                            lUInt16 hyphCharWidth, lUInt16 maxWidth)
     {
-        CR_UNUSED6(str, len, widths, flags, hyphCharWidth, maxWidth);
         return false;
     }
     virtual ~NoHyph() { }
@@ -72,7 +72,7 @@ public:
 static NoHyph NO_HYPH;
 static AlgoHyph ALGO_HYPH;
 
-HyphMethod * HyphMan::_method = &NO_HYPH;
+HyphMethod* HyphMan::_method = &NO_HYPH;
 
 #pragma pack(push, 1)
 typedef struct {
@@ -92,6 +92,14 @@ typedef struct {
     lUInt16 len;
 } hyph_index_item_t;
 #pragma pack(pop)
+
+void HyphMan::init()
+{
+    if (_dictList)
+        delete _dictList;
+    _dictList = new HyphDictionaryList();
+    _dictList->activate(lString16(HYPH_DICT_ID_NONE));
+}
 
 void HyphMan::uninit()
 {
@@ -134,15 +142,6 @@ bool HyphMan::activateDictionaryFromStream(LVStreamRef stream)
     return true;
 }
 
-bool HyphMan::init()
-{
-    if (_dictList)
-        delete _dictList;
-    _dictList = new HyphDictionaryList();
-	_dictList->activate(lString16(HYPH_DICT_ID_ALGORITHM));
-	return true;
-}
-
 bool HyphDictionary::activate()
 {
     if (HyphMan::_selectedDictionary == this)
@@ -169,12 +168,12 @@ bool HyphDictionary::activate()
 		CRLog::trace("Selecting hyphenation dictionary %s", UnicodeToUtf8(_filename).c_str() );
 		LVStreamRef stream = LVOpenFileStream(getFilename().c_str(), LVOM_READ);
 		if (stream.isNull()) {
-			CRLog::error("Cannot open hyphenation dictionary %s", UnicodeToUtf8(_filename).c_str() );
+			CRLog::error("Cannot open hyphenation dictionary %s", UnicodeToUtf8(_filename).c_str());
 			return false;
 		}
         TexHyph * method = new TexHyph();
         if ( !method->load( stream ) ) {
-			CRLog::error("Cannot open hyphenation dictionary %s", UnicodeToUtf8(_filename).c_str() );
+			CRLog::error("Cannot open hyphenation dictionary %s", UnicodeToUtf8(_filename).c_str());
             delete method;
             return false;
         }
@@ -196,11 +195,10 @@ bool HyphDictionaryList::activate(lString16 id)
 
 HyphDictionaryList::HyphDictionaryList()
 {
-	_list.add(new HyphDictionary(HDT_NONE, _16("[No Hyphenation]"),
+	_list.add(new HyphDictionary(HDT_NONE, lString16("[No Hyphenation]"),
 			lString16(HYPH_DICT_ID_NONE), lString16(HYPH_DICT_ID_NONE)));
-	_list.add(new HyphDictionary(HDT_ALGORITHM, _16("[Algorythmic Hyphenation]"),
+	_list.add(new HyphDictionary(HDT_ALGORITHM, lString16("[Algorythmic Hyphenation]"),
 			lString16(HYPH_DICT_ID_ALGORITHM), lString16(HYPH_DICT_ID_ALGORITHM)));
-
 }
 
 HyphDictionary* HyphDictionaryList::find(lString16 id)
@@ -385,7 +383,8 @@ public:
         insidePatternTag = false;
     }
     /// called on element attribute
-    virtual void OnAttribute( const lChar16 * nsname, const lChar16 * attrname, const lChar16 * attrvalue )
+    virtual void OnAttribute( const lChar16 * nsname,
+                              const lChar16 * attrname, const lChar16 * attrvalue )
     {
         CR_UNUSED3(nsname, attrname, attrvalue);
     }
@@ -591,7 +590,8 @@ bool TexHyph::match( const lChar16 * str, char * mask )
 //    return true;
 //}
 
-bool TexHyph::hyphenate( const lChar16 * str, int len, lUInt16 * widths, lUInt8 * flags, lUInt16 hyphCharWidth, lUInt16 maxWidth )
+bool TexHyph::hyphenate( const lChar16 * str, int len, lUInt16 * widths, lUInt8 * flags,
+                         lUInt16 hyphCharWidth, lUInt16 maxWidth )
 {
     if ( len<=3 )
         return false;
@@ -661,7 +661,8 @@ bool TexHyph::hyphenate( const lChar16 * str, int len, lUInt16 * widths, lUInt8 
     return res;
 }
 
-bool AlgoHyph::hyphenate( const lChar16 * str, int len, lUInt16 * widths, lUInt8 * flags, lUInt16 hyphCharWidth, lUInt16 maxWidth )
+bool AlgoHyph::hyphenate( const lChar16 * str, int len, lUInt16 * widths, lUInt8 * flags,
+                          lUInt16 hyphCharWidth, lUInt16 maxWidth )
 {
     lUInt16 chprops[WORD_LENGTH];
     lStr_getCharProps( str, len, chprops );
@@ -682,9 +683,11 @@ bool AlgoHyph::hyphenate( const lChar16 * str, int len, lUInt16 * widths, lUInt8
                 if ( chprops[i] & CH_PROP_VOWEL ) {
                     for ( j=i+1; j<end; ++j ) {
                         if ( chprops[j] & CH_PROP_VOWEL ) {
-                            if ( (chprops[i+1] & CH_PROP_CONSONANT) && (chprops[i+2] & CH_PROP_CONSONANT) )
+                            if ( (chprops[i+1] & CH_PROP_CONSONANT)
+                                 && (chprops[i+2] & CH_PROP_CONSONANT) )
                                 ++i;
-                            else if ( (chprops[i+1] & CH_PROP_CONSONANT) && ( chprops[i+2] & CH_PROP_ALPHA_SIGN ) )
+                            else if ( (chprops[i+1] & CH_PROP_CONSONANT)
+                                      && ( chprops[i+2] & CH_PROP_ALPHA_SIGN ) )
                                 i += 2;
                             if ( i-start>=1 && end-i>2 ) {
                                 // insert hyphenation mark
@@ -696,7 +699,8 @@ bool AlgoHyph::hyphenate( const lChar16 * str, int len, lUInt16 * widths, lUInt8
                                         "sh", "th", "ph", "ch", NULL
                                     };
                                     for (int k=0; dblSequences[k]; k++)
-                                        if (str[i]==dblSequences[k][0] && str[i+1]==dblSequences[k][1]) {
+                                        if (str[i]==dblSequences[k][0]
+                                            && str[i+1]==dblSequences[k][1]) {
                                             disabled = true;
                                             break;
                                         }
@@ -716,9 +720,4 @@ bool AlgoHyph::hyphenate( const lChar16 * str, int len, lUInt16 * widths, lUInt8
     return true;
 }
 
-AlgoHyph::~AlgoHyph()
-{
-}
-
-
-
+AlgoHyph::~AlgoHyph() {}

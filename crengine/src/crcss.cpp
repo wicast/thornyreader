@@ -1,6 +1,30 @@
 #include "include/crcss.h"
 
-const char* CR_CSS = R"delimiter(
+const char* CR_CSS_ALIGN_JUSTIFY = R"delimiter(
+body, p, .justindent {
+  text-align: justify;
+}
+)delimiter";
+
+const char* CR_CSS_ALIGN_LEFT = R"delimiter(
+body, p, .justindent {
+  text-align: left;
+}
+)delimiter";
+
+const char* CR_CSS_ALIGN_CENTER = R"delimiter(
+body, p, .justindent {
+  text-align: center;
+}
+)delimiter";
+
+const char* CR_CSS_ALIGN_RIGHT = R"delimiter(
+body, p, .justindent {
+  text-align: right;
+}
+)delimiter";
+
+const char* CR_CSS_BASE = R"delimiter(
 .empty-line, empty-line {
   display: block;
   height: 1em;
@@ -16,7 +40,6 @@ hr {
 
 body, p, .justindent {
   display: block;
-  text-align: justify;
   text-indent: 1.2em;
   margin-top: 0em;
   margin-bottom: 0em;
@@ -30,10 +53,7 @@ DocFragment {
 
 /* TEST AREA */
 
-
-
 /* TODO */
-
 
 img, image, .section_image, .coverpage, coverpage {
   display: block;
@@ -338,5 +358,4 @@ document-info, publish-info, custom-info {
 head, style, form, script {
   display: none;
 }
-
 )delimiter";

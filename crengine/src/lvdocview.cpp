@@ -115,8 +115,6 @@ void LVDocView::CreateEmptyDom()
 	cr_dom_->setNameSpaceTypes(fb2_ns_table);
 	marked_ranges_.clear();
     bookmark_ranges_.clear();
-    // SHOULD BE CALLED ONLY AFTER setNodeTypes
-    cr_dom_->setStylesheet(CR_CSS, true);
 }
 
 void LVDocView::RenderIfDirty()
@@ -225,6 +223,22 @@ void LVDocView::Resize(int width, int height)
         position_is_set_ = false;
         //goToBookmark(_posBookmark);
         //updateBookMarksRanges();
+    }
+}
+
+void LVDocView::SetTextAlign(int align) {
+    // SHOULD BE CALLED ONLY AFTER setNodeTypes
+    cr_dom_->setStylesheet(CR_CSS_BASE, true);
+    if (align == 0) {
+        cr_dom_->setStylesheet(CR_CSS_ALIGN_JUSTIFY, false);
+    } else if (align == 1) {
+        cr_dom_->setStylesheet(CR_CSS_ALIGN_LEFT, false);
+    } else if (align == 2) {
+        cr_dom_->setStylesheet(CR_CSS_ALIGN_CENTER, false);
+    } else if (align == 3) {
+        cr_dom_->setStylesheet(CR_CSS_ALIGN_RIGHT, false);
+    } else {
+        cr_dom_->setStylesheet(CR_CSS_ALIGN_JUSTIFY, false);
     }
 }
 

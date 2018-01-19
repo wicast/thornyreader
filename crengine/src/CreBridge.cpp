@@ -58,18 +58,18 @@ static const int ALLOWED_FONT_SIZES[] =
         125, 130, 135, 140, 145, 150, 155, 160
 };
 
-static int GetClosestValueInArray(const int values[], int values_size, int value)
+static int GetClosestValueInArray(const int array[], int array_lenght, int value)
 {
 	int closest_value = -1;
 	int smallest_delta = -1;
-	for (int i = 0; i < values_size; i++) {
-		int delta = values[i] - value;
+	for (int i = 0; i < array_lenght; i++) {
+		int delta = array[i] - value;
 		if (delta < 0) {
 			delta = -delta;
 		}
 		if (smallest_delta == -1 || smallest_delta > delta) {
 			smallest_delta = delta;
-			closest_value = values[i];
+			closest_value = array[i];
 		}
 	}
 	return closest_value;
@@ -163,10 +163,10 @@ void CreBridge::processConfig(CmdRequest& request, CmdResponse& response)
             return;
         }
         const char* val = reinterpret_cast<const char*>(temp_val);
-        if (key == CONFIG_CRE_VIEWPORT_WIDTH) {
+        if (key == CONFIG_CRE_PAGE_WIDTH) {
             int int_val = atoi(val);
             doc_view_->Resize(int_val, doc_view_->height_);
-        } else if (key == CONFIG_CRE_VIEWPORT_HEIGHT) {
+        } else if (key == CONFIG_CRE_PAGE_HEIGHT) {
             int int_val = atoi(val);
             doc_view_->Resize(doc_view_->width_, int_val);
         } else if (key == CONFIG_CRE_FONT_ANTIALIASING) {
@@ -200,20 +200,21 @@ void CreBridge::processConfig(CmdRequest& request, CmdResponse& response)
         } else if (key == CONFIG_CRE_BACKGROUND_COLOR) {
             doc_view_->background_color_ = (lUInt32) (atoi(val) & 0xFFFFFF);
             doc_view_->RequestRender();
-        } else if (key == CONFIG_CRE_MARGIN_TOP
-                   || key == CONFIG_CRE_MARGIN_LEFT
-                   || key == CONFIG_CRE_MARGIN_RIGHT
-                   || key == CONFIG_CRE_MARGIN_BOTTOM) {
+        } else if (key == CONFIG_CRE_MARGIN_LEFT) {
             int margin = atoi(val);
-            if (key == CONFIG_CRE_MARGIN_TOP) {
-                doc_view_->config_margins_.top = margin;
-            } else if (key == CONFIG_CRE_MARGIN_BOTTOM) {
-                doc_view_->config_margins_.bottom = margin;
-            } else if (key == CONFIG_CRE_MARGIN_LEFT) {
-                doc_view_->config_margins_.left = margin;
-            } else if (key == CONFIG_CRE_MARGIN_RIGHT) {
-                doc_view_->config_margins_.right = margin;
-            }
+            doc_view_->config_margins_.left = margin;
+            doc_view_->UpdatePageMargins();
+        } else if (key == CONFIG_CRE_MARGIN_TOP) {
+            int margin = atoi(val);
+            doc_view_->config_margins_.top = margin;
+            doc_view_->UpdatePageMargins();
+        } else if (key == CONFIG_CRE_MARGIN_RIGHT) {
+            int margin = atoi(val);
+            doc_view_->config_margins_.right = margin;
+            doc_view_->UpdatePageMargins();
+        } else if (key == CONFIG_CRE_MARGIN_BOTTOM) {
+            int margin = atoi(val);
+            doc_view_->config_margins_.bottom = margin;
             doc_view_->UpdatePageMargins();
         } else if (key == CONFIG_CRE_FONT_FACE_MAIN) {
             doc_view_->config_font_face_ = UnicodeToUtf8(lString16(val));
@@ -224,21 +225,17 @@ void CreBridge::processConfig(CmdRequest& request, CmdResponse& response)
             doc_view_->RequestRender();
         } else if (key == CONFIG_CRE_FONT_SIZE) {
             int int_val = atoi(val);
-            int_val = GetClosestValueInArray(
-                    ALLOWED_FONT_SIZES,
-                    sizeof(ALLOWED_FONT_SIZES) / sizeof(int),
-                    int_val);
+            int array_lenght = sizeof(ALLOWED_FONT_SIZES) / sizeof(int);
+            int_val = GetClosestValueInArray(ALLOWED_FONT_SIZES, array_lenght, int_val);
             if (doc_view_->config_font_size_ != int_val) {
                 doc_view_->config_font_size_ = int_val;
                 doc_view_->UpdatePageMargins();
                 doc_view_->RequestRender();
             }
-        } else if (key == CONFIG_CRE_INTERLINE_SPACE) {
+        } else if (key == CONFIG_CRE_INTERLINE) {
             int int_val = atoi(val);
-            int_val = GetClosestValueInArray(
-                    ALLOWED_INTERLINE_SPACES,
-                    sizeof(ALLOWED_INTERLINE_SPACES) / sizeof(int),
-                    int_val);
+            int array_lenght = sizeof(ALLOWED_INTERLINE_SPACES) / sizeof(int);
+            int_val = GetClosestValueInArray(ALLOWED_INTERLINE_SPACES, array_lenght, int_val);
             if (doc_view_->config_interline_space_ != int_val) {
                     doc_view_->config_interline_space_ = int_val;
                     doc_view_->RequestRender();
@@ -273,6 +270,26 @@ void CreBridge::processConfig(CmdRequest& request, CmdResponse& response)
             bool bool_val = (bool) int_val;
             doc_view_->config_enable_footnotes_ = bool_val;
             doc_view_->GetCrDom()->setDocFlag(DOC_FLAG_ENABLE_FOOTNOTES, bool_val);
+            doc_view_->RequestRender();
+        } else if (key == CONFIG_CRE_TEXT_ALIGN) {
+            int int_val = atoi(val);
+            if (int_val < 0 || int_val > 3) {
+                response.result = RES_BAD_REQ_DATA;
+                return;
+            }
+            doc_view_->SetTextAlign(int_val);
+            doc_view_->RequestRender();
+        } else if (key == CONFIG_CRE_HYPHENATION) {
+            int int_val = atoi(val);
+            if (int_val < 0 || int_val > 1) {
+                response.result = RES_BAD_REQ_DATA;
+                return;
+            }
+            if (int_val == 0) {
+                HyphMan::activateDictionary(lString16(HYPH_DICT_ID_NONE));
+            } else {
+                HyphMan::activateDictionary(lString16(HYPH_DICT_ID_ALGORITHM));
+            }
             doc_view_->RequestRender();
         } else {
             CRLog::warn("processConfig unknown key: key=%d, val=%s", key, val);

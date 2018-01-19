@@ -85,7 +85,7 @@ private:
     lvRect margins_;
     bool show_cover_;
     bool background_tiled_;
-
+    int config_text_align_;
     void UpdateScrollInfo();
     /// load document from stream
     bool LoadDoc(int doc_format, LVStreamRef stream);
@@ -193,6 +193,7 @@ public:
     /// converts scrollbar pos to doc pos
     int scrollPosToDocPos(int scrollpos);
     void Resize(int dx, int dy);
+    void SetTextAlign(int align);
     /// get view height
     int GetHeight();
     /// get view width
