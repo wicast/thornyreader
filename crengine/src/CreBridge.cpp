@@ -484,14 +484,21 @@ void CreBridge::processPageByXPath(CmdRequest& request, CmdResponse& response)
         response.result = RES_BAD_REQ_DATA;
         return;
     }
-    int page = -1;
     lString16 xpath(reinterpret_cast<const char*>(xpath_string));
     ldomXPointer bm = doc_view_->GetCrDom()->createXPointer(xpath);
-    if (!bm.isNull()) {
-        doc_view_->GoToBookmark(bm);
-        page = (ExportPage(doc_view_->GetColumns(), doc_view_->GetCurrPage()));
+    if (bm.isNull()) {
+        CRLog::error("processPageByXPath bad xpath bm.isNull()");
+        response.result = RES_BAD_REQ_DATA;
+        return;
     }
-    response.addInt((uint32_t) page);
+    doc_view_->GoToBookmark(bm);
+    int current_page = doc_view_->GetCurrPage();
+    if (current_page < 0) {
+        CRLog::error("processPageByXPath bad xpath current_page < 0");
+        response.result = RES_BAD_REQ_DATA;
+        return;
+    }
+    response.addInt((uint32_t) ExportPage(doc_view_->GetColumns(), current_page));
 }
 
 void CreBridge::processPageXPath(CmdRequest& request, CmdResponse& response)
