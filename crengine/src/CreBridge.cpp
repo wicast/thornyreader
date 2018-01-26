@@ -291,6 +291,16 @@ void CreBridge::processConfig(CmdRequest& request, CmdResponse& response)
                 HyphMan::activateDictionary(lString16(HYPH_DICT_ID_ALGORITHM));
             }
             doc_view_->RequestRender();
+        } else if (key == CONFIG_CRE_FLOATING_PUNCTUATION) {
+            int int_val = atoi(val);
+            if (int_val < 0 || int_val > 1) {
+                response.result = RES_BAD_REQ_DATA;
+                return;
+            }
+            bool bool_val = (bool) int_val;
+            if (bool_val != gFlgFloatingPunctuationEnabled) {
+                gFlgFloatingPunctuationEnabled = bool_val;
+            }
         } else {
             CRLog::warn("processConfig unknown key: key=%d, val=%s", key, val);
         }

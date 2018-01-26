@@ -144,9 +144,11 @@ lUInt32 calcGlobalSettingsHash(int documentId)
     if (gFlgFloatingPunctuationEnabled) {
         hash = hash * 75 + 1761;
     }
-    hash = hash * 31
-           + (HyphMan::getSelectedDictionary() != NULL ? HyphMan::getSelectedDictionary()->getHash()
-                                                       : 123);
+    if (HyphMan::getSelectedDictionary() == NULL) {
+        hash = hash * 31 + 123;
+    } else {
+        hash = hash * 31 + HyphMan::getSelectedDictionary()->getHash();
+    }
     return hash;
 }
 
