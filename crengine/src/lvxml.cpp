@@ -2143,29 +2143,30 @@ public:
         return true;
     }
     /// delimited by first line ident
-    bool DoIdentParaImport(LvXMLParserCallback * callback)
-    {
-        CRLog::debug("DoIdentParaImport()");
+    bool DoParaPerIdentImport(LvXMLParserCallback* callback) {
+        CRLog::debug("DoParaPerIdentImport()");
         int pos = 0;
-        for ( ;; ) {
-            if ( length()-pos <= MAX_PARA_LINES ) {
-                if ( pos )
-                    RemoveLines( pos );
-                ReadLines( MAX_BUF_LINES );
+        for (;;) {
+            if (length() - pos <= MAX_PARA_LINES) {
+                if (pos) {
+                    RemoveLines(pos);
+                }
+                ReadLines(MAX_BUF_LINES);
                 pos = 0;
             }
-            if ( pos>=length() )
+            if (pos >= length()) {
                 break;
-            int i=pos+1;
+            }
+            int i = pos + 1;
             bool emptyLineFlag = false;
-            if ( pos>=length() || DetectHeadingLevelByText( get(pos)->text )==0 ) {
-                for ( ; i<length() && i<pos+MAX_PARA_LINES; i++ ) {
-                    LVTextFileLine * item = get(i);
-                    if ( item->lpos>min_left ) {
+            if (pos >= length() || DetectHeadingLevelByText(get(pos)->text) == 0) {
+                for (; i < length() && i < pos + MAX_PARA_LINES; i++) {
+                    LVTextFileLine* item = get(i);
+                    if (item->lpos > min_left) {
                         // ident
                         break;
                     }
-                    if ( item->lpos==item->rpos ) {
+                    if (item->lpos == item->rpos) {
                         // empty line
                         i++;
                         emptyLineFlag = true;
@@ -2173,49 +2174,53 @@ public:
                     }
                 }
             }
-            if (i>pos+1 || !emptyLineFlag)
-                AddPara( pos, i-1 - (emptyLineFlag?1:0), callback );
-            else
+            if (i > pos + 1 || !emptyLineFlag) {
+                AddPara(pos, i - 1 - (emptyLineFlag ? 1 : 0), callback);
+            } else {
                 AddEmptyLine(callback);
+            }
             pos = i;
         }
-        if ( inSubSection )
-            callback->OnTagClose( NULL, L"section" );
+        if (inSubSection) {
+            callback->OnTagClose(NULL, L"section");
+        }
         return true;
     }
     /// delimited by empty lines
-    bool DoEmptyLineParaImport(LvXMLParserCallback * callback)
-    {
-        CRLog::debug("DoEmptyLineParaImport()");
+    bool DoParaPerEmptyLinesImport(LvXMLParserCallback* callback) {
+        CRLog::debug("DoParaPerEmptyLinesImport()");
         int pos = 0;
         int shortLineCount = 0;
         int emptyLineCount = 0;
-        for ( ;; ) {
-            if ( length()-pos <= MAX_PARA_LINES ) {
-                if ( pos )
-                    RemoveLines( pos - 1 );
-                ReadLines( MAX_BUF_LINES );
+        for (;;) {
+            if (length() - pos <= MAX_PARA_LINES) {
+                if (pos) {
+                    RemoveLines(pos - 1);
+                }
+                ReadLines(MAX_BUF_LINES);
                 pos = 1;
             }
-            if ( pos>=length() )
+            if (pos >= length()) {
                 break;
+            }
             // skip starting empty lines
-            while ( pos<length() ) {
-                LVTextFileLine * item = get(pos);
-                if ( item->lpos!=item->rpos )
+            while (pos < length()) {
+                LVTextFileLine* item = get(pos);
+                if (item->lpos != item->rpos) {
                     break;
+                }
                 pos++;
             }
-            int i=pos;
-            if ( pos>=length() || DetectHeadingLevelByText( get(pos)->text )==0 ) {
-                for ( ; i<length() && i<pos+MAX_PARA_LINES; i++ ) {
-                    LVTextFileLine * item = get(i);
-                    if ( item->lpos==item->rpos ) {
+            int i = pos;
+            if (pos >= length() || DetectHeadingLevelByText(get(pos)->text) == 0) {
+                for (; i < length() && i < pos + MAX_PARA_LINES; i++) {
+                    LVTextFileLine* item = get(i);
+                    if (item->lpos == item->rpos) {
                         // empty line
                         emptyLineCount++;
                         break;
                     }
-                    if ( item->rpos - item->lpos < MIN_MULTILINE_PARA_WIDTH ) {
+                    if (item->rpos - item->lpos < MIN_MULTILINE_PARA_WIDTH) {
                         // next line is very short, possible paragraph start
                         shortLineCount++;
                         break;
@@ -2224,60 +2229,62 @@ public:
                     emptyLineCount = 0;
                 }
             }
-            if ( i==length() )
+            if (i == length()) {
                 i--;
-            if ( i>=pos ) {
-                AddPara( pos, i, callback );
-                if ( emptyLineCount ) {
-                    if ( shortLineCount > 1 )
-                        AddEmptyLine( callback );
+            }
+            if (i >= pos) {
+                AddPara(pos, i, callback);
+                if (emptyLineCount) {
+                    if (shortLineCount > 1) {
+                        AddEmptyLine(callback);
+                    }
                     shortLineCount = 0;
                     emptyLineCount = 0;
                 }
             }
-            pos = i+1;
+            pos = i + 1;
         }
-        if ( inSubSection )
-            callback->OnTagClose( NULL, L"section" );
+        if (inSubSection) {
+            callback->OnTagClose(NULL, L"section");
+        }
         return true;
     }
     /// delimited by empty lines
-    bool DoPreFormattedImport(LvXMLParserCallback * callback)
-    {
+    bool DoPreFormattedImport(LvXMLParserCallback* callback) {
         CRLog::debug("DoPreFormattedImport()");
         int remainingLines = 0;
         do {
-            for ( int i=remainingLines; i<length(); i++ ) {
-                LVTextFileLine * item = get(i);
-                if ( item->rpos > item->lpos ) {
-                    callback->OnTagOpenNoAttr( NULL, L"pre" );
-                       callback->OnText( item->text.c_str(), item->text.length(), item->flags );
-
-                    callback->OnTagClose( NULL, L"pre" );
+            for (int i = remainingLines; i < length(); i++) {
+                LVTextFileLine* item = get(i);
+                if (item->rpos > item->lpos) {
+                    callback->OnTagOpenNoAttr(NULL, L"pre");
+                    callback->OnText(item->text.c_str(), item->text.length(), item->flags);
+                    callback->OnTagClose(NULL, L"pre");
                 } else {
-                    callback->OnTagOpenAndClose( NULL, L"empty-line" );
+                    callback->OnTagOpenAndClose(NULL, L"empty-line");
                 }
-           }
-            RemoveLines( length()-3 );
+            }
+            RemoveLines(length() - 3);
             remainingLines = 3;
-        } while ( ReadLines( 100 ) );
-        if ( inSubSection )
-            callback->OnTagClose( NULL, L"section" );
+        } while (ReadLines(100));
+        if (inSubSection) {
+            callback->OnTagClose(NULL, L"section");
+        }
         return true;
     }
     /// import document body
-    bool DoTextImport(LvXMLParserCallback * callback)
-    {
-        if ( formatFlags & tftPML)
-            return DoPMLImport( callback );
-        else if ( formatFlags & tftPreFormatted )
-            return DoPreFormattedImport( callback );
-        else if ( formatFlags & tftParaIdents )
-            return DoIdentParaImport( callback );
-        else if ( formatFlags & tftParaEmptyLineDelim )
-            return DoEmptyLineParaImport( callback );
-        else
-            return DoParaPerLineImport( callback );
+    bool DoTextImport(LvXMLParserCallback* callback) {
+        if (formatFlags & tftPML) {
+            return DoPMLImport(callback);
+        } else if (formatFlags & tftPreFormatted) {
+            return DoPreFormattedImport(callback);
+        } else if (formatFlags & tftParaIdents) {
+            return DoParaPerIdentImport(callback);
+        } else if (formatFlags & tftParaEmptyLineDelim) {
+            return DoParaPerEmptyLinesImport(callback);
+        } else {
+            return DoParaPerLineImport(callback);
+        }
     }
 };
 
@@ -2424,8 +2431,7 @@ bool LVTextParser::CheckFormat()
 }
 
 /// parses input stream
-bool LVTextParser::Parse()
-{
+bool LVTextParser::Parse() {
     LVTextLineQueue queue(this, 2000);
     queue.ReadLines(2000);
     if (smart_format_) {
@@ -2448,7 +2454,6 @@ bool LVTextParser::Parse()
       // BODY
       m_callback->OnTagOpenNoAttr( NULL, L"body" );
         //callback_->OnTagOpen( NULL, L"section" );
-          // process text
           queue.DoTextImport(m_callback);
         //callback_->OnTagClose( NULL, L"section" );
       m_callback->OnTagClose( NULL, L"body" );
