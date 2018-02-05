@@ -110,6 +110,7 @@ public:
     bool config_embeded_styles_;
     bool config_embeded_fonts_;
     bool config_enable_footnotes_;
+    bool config_firstpage_thumb_;
     bool config_txt_smart_format_;
 
     inline bool IsPagesMode() { return viewport_mode_ == MODE_PAGES; }

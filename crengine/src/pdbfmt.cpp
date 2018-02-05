@@ -1131,7 +1131,7 @@ bool ImportMOBIDoc(LVStreamRef& stream, CrDom* doc, doc_format_t& doc_format)
     {
         // TXT
         LvDomWriter writer(doc);
-        LVTextParser parser(stream, &writer, false);
+        LVTextParser parser(stream, &writer, false, false);
         if (!parser.CheckFormat()) {
             return false;
         } else {

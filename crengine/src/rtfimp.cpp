@@ -366,7 +366,6 @@ LVRtfParser::LVRtfParser( LVStreamRef stream, LvXMLParserCallback * callback )
     , imageIndex(0)
 {
     m_stack.setDestination(  new LVRtfDefDestination(*this) );
-    m_firstPageTextCounter = 1000;
 }
 
 LVRtfDestination::LVRtfDestination( LVRtfParser & parser )
@@ -464,7 +463,7 @@ bool LVRtfParser::Parse()
             m_callback->OnTagOpenNoAttr( NULL, L"book-title" );
                 if ( !bookTitle.empty() )
                     m_callback->OnText( bookTitle.c_str(), bookTitle.length(), 0 );
-          //queue.DetectBookDescription( m_callback );
+          //queue.TxtSmartDescription(m_callback);
         m_callback->OnTagOpenNoAttr( NULL, L"title-info" );
       m_callback->OnTagClose( NULL, L"description" );
       // BODY

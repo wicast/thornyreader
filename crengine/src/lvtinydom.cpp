@@ -1510,7 +1510,7 @@ public:
                 LVOM_READ);
         if (!css_stream.isNull()) {
             lString16 css;
-            css << LVReadTextFile( css_stream );
+            css << LVReadCssText( css_stream );
             int offset = in_progress_.add(cssFile);
             ret = Parse(codeBase, css) || ret;
             in_progress_.erase(offset, 1);

@@ -402,7 +402,7 @@ bool LVDocView::LoadDoc(int doc_format, LVStreamRef stream)
         }
     } else if (doc_format == DOC_FORMAT_TXT) {
         LvDomWriter writer(cr_dom_);
-        parser = new LVTextParser(stream_, &writer, config_txt_smart_format_);
+        parser = new LVTextParser(stream_, &writer, config_txt_smart_format_, config_firstpage_thumb_);
     } else if (doc_format == DOC_FORMAT_HTML) {
         LvDomAutocloseWriter writer(cr_dom_, false, HTML_AUTOCLOSE_TABLE);
         parser = new LvHtmlParser(stream_, &writer);

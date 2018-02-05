@@ -724,7 +724,7 @@ bool ImportEpubDocument(LVStreamRef stream, CrDom* m_doc)
                 lString16 name = LVCombinePaths(codeBase, href);
                 LVStreamRef cssStream = m_arc->OpenStream(name.c_str(), LVOM_READ);
                 if (!cssStream.isNull()) {
-                    lString8 cssFile = UnicodeToUtf8(LVReadTextFile(cssStream));
+                    lString8 cssFile = UnicodeToUtf8(LVReadCssText(cssStream));
                     lString16 base = name;
                     LVExtractLastPathElement(base);
                     //CRLog::trace("style: %s", cssFile.c_str());

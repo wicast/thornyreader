@@ -125,7 +125,6 @@ public:
 
 class LVFileParserBase : public LVFileFormatParser
 {
-
 protected:
     LVStreamRef m_stream;
     lUInt8* m_buf;
@@ -135,14 +134,12 @@ protected:
     int      m_buf_pos;
     lvpos_t  m_buf_fpos;
     bool     m_stopped; // true if Stop() is called
-    int      m_firstPageTextCounter;
     /// fills buffer, to provide specified number of bytes for read
     bool FillBuffer(int bytesToRead);
     /// seek to specified stream position
     bool Seek( lvpos_t pos, int bytesToPrefetch=0 );
     /// override to return file reading position percent
     virtual int getProgressPercent();
-
 public:
     /// constructor
     LVFileParserBase(LVStreamRef stream);
@@ -282,63 +279,15 @@ public:
     virtual ~LVTextFileBase();
 };
 
-/** \brief document text cache
-
-    To read fragments of document text on demand.
-
-*/
-class LVXMLTextCache : public LVTextFileBase
-{
-private:
-    struct cache_item
-    {
-        cache_item * next;
-        lUInt32      pos;
-        lUInt32      size;
-        lUInt32      flags;
-        lString16    text;
-        cache_item( lString16 & txt )
-            : next(NULL), text(txt)
-        {
-        }
-    };
-
-    cache_item * m_head;
-    lUInt32    m_max_itemcount;
-    lUInt32    m_max_charcount;
-
-    void cleanOldItems( lUInt32 newItemChars );
-
-    /// adds new item
-    void addItem( lString16 & str );
-
-public:
-    /// returns true if format is recognized by parser
-    virtual bool CheckFormat();
-    /// parses input stream
-    virtual bool Parse();
-    /// constructor
-    LVXMLTextCache( LVStreamRef stream, lUInt32 max_itemcount, lUInt32 max_charcount )
-        : LVTextFileBase( stream ), m_head(NULL)
-        , m_max_itemcount(max_itemcount)
-        , m_max_charcount(max_charcount)
-    {
-    }
-    /// destructor
-    virtual ~LVXMLTextCache();
-    /// reads text from cache or input stream
-    lString16 getText( lUInt32 pos, lUInt32 size, lUInt32 flags );
-};
-
-
-class LVTextParser : public LVTextFileBase
-{
+class LVTextParser : public LVTextFileBase {
 protected:
-    LvXMLParserCallback * m_callback;
+    LvXMLParserCallback* m_callback;
     bool smart_format_;
+    bool firstpage_thumb_;
 public:
     /// constructor
-    LVTextParser( LVStreamRef stream, LvXMLParserCallback * callback, bool pre_formatted );
+    LVTextParser(LVStreamRef stream, LvXMLParserCallback* callback, bool smart_format,
+                 bool firstpage_thumb);
     /// descructor
     virtual ~LVTextParser();
     /// returns true if format is recognized by parser
@@ -393,9 +342,9 @@ public:
 };
 
 /// read stream contents to string
-lString16 LVReadTextFile( LVStreamRef stream );
+lString16 LVReadCssText( LVStreamRef stream );
 /// read file contents to string
-lString16 LvReadTextFile( lString16 filename );
+lString16 LVReadCssText( lString16 filename );
 
 LVStreamRef GetFB2Coverpage(LVStreamRef stream);
 

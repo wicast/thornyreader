@@ -1584,7 +1584,7 @@ bool LVLoadStylesheetFile(lString16 pathName, lString8& css)
     if (file.isNull()) {
         return false;
     }
-    lString8 txt = UnicodeToUtf8(LVReadTextFile(file));
+    lString8 txt = UnicodeToUtf8(LVReadCssText(file));
     lString8 txt2;
     const char* s = txt.c_str();
     lString8 import_file;
@@ -1595,7 +1595,7 @@ bool LVLoadStylesheetFile(lString16 pathName, lString8& css)
         if (!importFilename.empty()) {
             LVStreamRef file2 = LVOpenFileStream(importFilename.c_str(), LVOM_READ);
             if (!file2.isNull()) {
-                txt2 = UnicodeToUtf8(LVReadTextFile(file2));
+                txt2 = UnicodeToUtf8(LVReadCssText(file2));
             }
         }
     }
