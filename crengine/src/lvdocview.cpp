@@ -57,22 +57,17 @@ LVDocView::LVDocView()
           page_columns_(1),
 		  background_color_(0xFFFFFFE0),
 		  text_color_(0x000060),
-          config_margins_(),
-          config_font_size_(24),
-          config_interline_space_(100),
-          config_embeded_styles_(false),
-          config_embeded_fonts_(false),
-          config_enable_footnotes_(true),
-          config_firstpage_thumb_(false),
-          config_txt_smart_format_(true)
+          cfg_margins_(),
+          cfg_font_size_(24),
+          cfg_interline_space_(100),
+          cfg_embeded_styles_(false),
+          cfg_embeded_fonts_(false),
+          cfg_enable_footnotes_(true),
+          cfg_firstpage_thumb_(false),
+          cfg_txt_smart_format_(true)
 {
-	config_font_face_ = lString8("Arial, Roboto");
-	base_font_ = fontMan->GetFont(
-	        config_font_size_,
-	        400,
-	        false,
-	        DEF_FONT_FAMILY,
-	        config_font_face_);
+	cfg_font_face_ = lString8("Arial, Roboto");
+	base_font_ = fontMan->GetFont(cfg_font_size_, 400, false, DEF_FONT_FAMILY, cfg_font_face_);
 	doc_props_ = LVCreatePropsContainer();
 	CreateEmptyDom();
 }
@@ -108,9 +103,9 @@ void LVDocView::CreateEmptyDom()
 	doc_format_ = DOC_FORMAT_NULL;
 	cr_dom_->setProps(doc_props_);
 	cr_dom_->setDocFlags(0);
-	cr_dom_->setDocFlag(DOC_FLAG_ENABLE_FOOTNOTES, config_enable_footnotes_);
-	cr_dom_->setDocFlag(DOC_FLAG_EMBEDDED_STYLES, config_embeded_styles_);
-	cr_dom_->setDocFlag(DOC_FLAG_EMBEDDED_FONTS, config_embeded_fonts_);
+	cr_dom_->setDocFlag(DOC_FLAG_ENABLE_FOOTNOTES, cfg_enable_footnotes_);
+	cr_dom_->setDocFlag(DOC_FLAG_EMBEDDED_STYLES, cfg_embeded_styles_);
+	cr_dom_->setDocFlag(DOC_FLAG_EMBEDDED_FONTS, cfg_embeded_fonts_);
 	cr_dom_->setNodeTypes(fb2_elem_table);
 	cr_dom_->setAttributeTypes(fb2_attr_table);
 	cr_dom_->setNameSpaceTypes(fb2_ns_table);
@@ -134,7 +129,7 @@ void LVDocView::RenderIfDirty()
             return;
         }
         int y0 = show_cover_ ? dy + margins_.bottom * 4 : 0;
-        cr_dom_->render(&pages_list_, dx, dy, show_cover_, y0, base_font_, config_interline_space_);
+        cr_dom_->render(&pages_list_, dx, dy, show_cover_, y0, base_font_, cfg_interline_space_);
         fontMan->gc();
         is_rendered_ = true;
         UpdateSelections();
@@ -174,16 +169,11 @@ void LVDocView::CheckPos() {
 
 void LVDocView::UpdatePageMargins()
 {
-    int new_margin_left = config_margins_.left;
-    int new_margin_right = config_margins_.right;
+    int new_margin_left = cfg_margins_.left;
+    int new_margin_right = cfg_margins_.right;
     if (gFlgFloatingPunctuationEnabled) {
         int align = 0;
-        base_font_ = fontMan->GetFont(
-                config_font_size_,
-                400,
-                false,
-                DEF_FONT_FAMILY,
-                config_font_face_);
+        base_font_ = fontMan->GetFont(cfg_font_size_, 400, false, DEF_FONT_FAMILY, cfg_font_face_);
         align = base_font_->getVisualAligmentWidth() / 2;
         if (align > new_margin_right) {
             align = new_margin_right;
@@ -193,12 +183,12 @@ void LVDocView::UpdatePageMargins()
     }
     if (margins_.left != new_margin_left
         || margins_.right != new_margin_right
-        || margins_.top != config_margins_.top
-        || margins_.bottom != config_margins_.bottom) {
+        || margins_.top != cfg_margins_.top
+        || margins_.bottom != cfg_margins_.bottom) {
         margins_.left = new_margin_left;
         margins_.right = new_margin_right;
-        margins_.top = config_margins_.top;
-        margins_.bottom = config_margins_.bottom;
+        margins_.top = cfg_margins_.top;
+        margins_.bottom = cfg_margins_.bottom;
         UpdateLayout();
         REQUEST_RENDER("UpdatePageMargins")
     }
@@ -242,8 +232,6 @@ void LVDocView::SetTextAlign(int align) {
         cr_dom_->setStylesheet(CR_CSS_ALIGN_JUSTIFY, false);
     }
 }
-
-//TODO
 
 static LVStreamRef ThResolveStream(int doc_format, const char* absolute_path_chars,
                                    uint32_t packed_size, bool smart_archive)
@@ -403,7 +391,7 @@ bool LVDocView::LoadDoc(int doc_format, LVStreamRef stream)
         }
     } else if (doc_format == DOC_FORMAT_TXT) {
         LvDomWriter writer(cr_dom_);
-        parser = new LVTextParser(stream_, &writer, config_txt_smart_format_, config_firstpage_thumb_);
+        parser = new LVTextParser(stream_, &writer, cfg_txt_smart_format_, cfg_firstpage_thumb_);
     } else if (doc_format == DOC_FORMAT_HTML) {
         LvDomAutocloseWriter writer(cr_dom_, false, HTML_AUTOCLOSE_TABLE);
         parser = new LvHtmlParser(stream_, &writer);
@@ -423,7 +411,7 @@ bool LVDocView::LoadDoc(int doc_format, LVStreamRef stream)
     page_ = 0;
 #if 0
     lString16 stylesheet = cr_dom_->createXPointer(L"/FictionBook/stylesheet").getText();
-    if (!stylesheet.empty() && config_embeded_styles_) {
+    if (!stylesheet.empty() && cfg_embeded_styles_) {
         cr_dom_->getStylesheet()->parse(UnicodeToUtf8(stylesheet).c_str());
         cr_dom_->setStylesheet(UnicodeToUtf8(stylesheet).c_str(), false);
     }
@@ -1043,16 +1031,11 @@ void LVDocView::CheckRenderProps(int width, int height)
 		return;
 	}
 	UpdateLayout();
-	base_font_ = fontMan->GetFont(
-            config_font_size_,
-            400,
-            false,
-            DEF_FONT_FAMILY,
-            config_font_face_);
+	base_font_ = fontMan->GetFont(cfg_font_size_, 400, false, DEF_FONT_FAMILY, cfg_font_face_);
 	if (!base_font_) {
 		return;
 	}
-    cr_dom_->setRenderProps(width, height, base_font_, config_interline_space_);
+    cr_dom_->setRenderProps(width, height, base_font_, cfg_interline_space_);
     text_highlight_options_t h;
     h.bookmarkHighlightMode = highlight_mode_underline;
     h.selectionColor = 0xC0C0C0 & 0xFFFFFF;
@@ -1207,7 +1190,7 @@ void LVDocView::UpdateBookmarksRanges()
 int LVDocView::GetColumns()
 {
 	if (viewport_mode_ == MODE_SCROLL
-			|| width_ < config_font_size_ * MIN_EM_PER_PAGE
+			|| width_ < cfg_font_size_ * MIN_EM_PER_PAGE
 			|| width_ * 5 < height_ * 6) {
 		return 1;
 	}

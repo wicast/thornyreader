@@ -202,22 +202,22 @@ void CreBridge::processConfig(CmdRequest& request, CmdResponse& response)
             doc_view_->RequestRender();
         } else if (key == CONFIG_CRE_MARGIN_LEFT) {
             int margin = atoi(val);
-            doc_view_->config_margins_.left = margin;
+            doc_view_->cfg_margins_.left = margin;
             doc_view_->UpdatePageMargins();
         } else if (key == CONFIG_CRE_MARGIN_TOP) {
             int margin = atoi(val);
-            doc_view_->config_margins_.top = margin;
+            doc_view_->cfg_margins_.top = margin;
             doc_view_->UpdatePageMargins();
         } else if (key == CONFIG_CRE_MARGIN_RIGHT) {
             int margin = atoi(val);
-            doc_view_->config_margins_.right = margin;
+            doc_view_->cfg_margins_.right = margin;
             doc_view_->UpdatePageMargins();
         } else if (key == CONFIG_CRE_MARGIN_BOTTOM) {
             int margin = atoi(val);
-            doc_view_->config_margins_.bottom = margin;
+            doc_view_->cfg_margins_.bottom = margin;
             doc_view_->UpdatePageMargins();
         } else if (key == CONFIG_CRE_FONT_FACE_MAIN) {
-            doc_view_->config_font_face_ = UnicodeToUtf8(lString16(val));
+            doc_view_->cfg_font_face_ = UnicodeToUtf8(lString16(val));
             doc_view_->UpdatePageMargins();
             doc_view_->RequestRender();
         } else if (key == CONFIG_CRE_FONT_FACE_FALLBACK) {
@@ -227,8 +227,8 @@ void CreBridge::processConfig(CmdRequest& request, CmdResponse& response)
             int int_val = atoi(val);
             int array_lenght = sizeof(ALLOWED_FONT_SIZES) / sizeof(int);
             int_val = GetClosestValueInArray(ALLOWED_FONT_SIZES, array_lenght, int_val);
-            if (doc_view_->config_font_size_ != int_val) {
-                doc_view_->config_font_size_ = int_val;
+            if (doc_view_->cfg_font_size_ != int_val) {
+                doc_view_->cfg_font_size_ = int_val;
                 doc_view_->UpdatePageMargins();
                 doc_view_->RequestRender();
             }
@@ -236,8 +236,8 @@ void CreBridge::processConfig(CmdRequest& request, CmdResponse& response)
             int int_val = atoi(val);
             int array_lenght = sizeof(ALLOWED_INTERLINE_SPACES) / sizeof(int);
             int_val = GetClosestValueInArray(ALLOWED_INTERLINE_SPACES, array_lenght, int_val);
-            if (doc_view_->config_interline_space_ != int_val) {
-                    doc_view_->config_interline_space_ = int_val;
+            if (doc_view_->cfg_interline_space_ != int_val) {
+                    doc_view_->cfg_interline_space_ = int_val;
                     doc_view_->RequestRender();
                     doc_view_->position_is_set_ = false;
             }
@@ -248,7 +248,7 @@ void CreBridge::processConfig(CmdRequest& request, CmdResponse& response)
                 return;
             }
             bool bool_val = (bool) int_val;
-            doc_view_->config_embeded_styles_ = bool_val;
+            doc_view_->cfg_embeded_styles_ = bool_val;
             doc_view_->GetCrDom()->setDocFlag(DOC_FLAG_EMBEDDED_STYLES, bool_val);
             doc_view_->RequestRender();
         } else if (key == CONFIG_CRE_EMBEDDED_FONTS) {
@@ -258,7 +258,7 @@ void CreBridge::processConfig(CmdRequest& request, CmdResponse& response)
                 return;
             }
             bool bool_val = (bool) int_val;
-            doc_view_->config_embeded_fonts_ = bool_val;
+            doc_view_->cfg_embeded_fonts_ = bool_val;
             doc_view_->GetCrDom()->setDocFlag(DOC_FLAG_EMBEDDED_FONTS, bool_val);
             doc_view_->RequestRender();
         } else if (key == CONFIG_CRE_FOOTNOTES) {
@@ -268,7 +268,7 @@ void CreBridge::processConfig(CmdRequest& request, CmdResponse& response)
                 return;
             }
             bool bool_val = (bool) int_val;
-            doc_view_->config_enable_footnotes_ = bool_val;
+            doc_view_->cfg_enable_footnotes_ = bool_val;
             doc_view_->GetCrDom()->setDocFlag(DOC_FLAG_ENABLE_FOOTNOTES, bool_val);
             doc_view_->RequestRender();
         } else if (key == CONFIG_CRE_TEXT_ALIGN) {

@@ -98,20 +98,20 @@ private:
 public:
     bool position_is_set_;
     int doc_format_;
-    lString8 config_font_face_;
+    lString8 cfg_font_face_;
     int width_;
     int height_;
     int page_columns_;
     lUInt32 background_color_;
     lUInt32 text_color_;
-    lvRect config_margins_;
-    int config_font_size_;
-    int config_interline_space_;
-    bool config_embeded_styles_;
-    bool config_embeded_fonts_;
-    bool config_enable_footnotes_;
-    bool config_firstpage_thumb_;
-    bool config_txt_smart_format_;
+    lvRect cfg_margins_;
+    int cfg_font_size_;
+    int cfg_interline_space_;
+    bool cfg_embeded_styles_;
+    bool cfg_embeded_fonts_;
+    bool cfg_enable_footnotes_;
+    bool cfg_firstpage_thumb_;
+    bool cfg_txt_smart_format_;
 
     inline bool IsPagesMode() { return viewport_mode_ == MODE_PAGES; }
     inline bool IsScrollMode() { return viewport_mode_ == MODE_SCROLL; }
