@@ -1013,6 +1013,7 @@ static bool startsWithOneOf( const lString16 & s, const lChar16 * list[] )
 
 #define TXT_SMART_HEADERS false
 #define TXT_SMART_DESCRIPTION false
+#define FIRSTPAGE_BLOCKS_MAX 50
 
 int DetectHeadingLevelByText(const lString16& str) {
     if (!TXT_SMART_HEADERS) {
@@ -1139,9 +1140,9 @@ lChar16 getSingleLineChar( const lString16 & s) {
 class LVTextLineQueue : public LVPtrVector<LVTextFileLine>
 {
 private:
-    LVTextFileBase * file;
-    int first_line_index;
+    LVTextFileBase* file;
     int maxLineSize;
+    int first_line_index;
     lString16 bookTitle;
     lString16 bookAuthors;
     lString16 seriesName;
@@ -1152,13 +1153,15 @@ private:
     int avg_left;
     int avg_right;
     int avg_center;
-    int paraCount;
+    int blocks_count_;
+    int para_count_;
     int linesToSkip;
     bool lastParaWasTitle;
     bool inSubSection;
     int max_left_stats_pos;
     int max_left_second_stats_pos;
     int max_right_stats_pos;
+    bool firstpage_thumb_;
     enum {
         tftParaPerLine = 1,
         tftParaIdents = 2,
@@ -1172,10 +1175,11 @@ private:
         tftPML = 512 // Palm Markup Language
     } smart_format_flags__t;
 public:
-    LVTextLineQueue(LVTextFileBase* f, int maxLineLen)
-            : file(f),
-              first_line_index(0),
+    LVTextLineQueue(LVTextFileBase* file, bool firstpage_thumb, int maxLineLen)
+            : file(file),
+              firstpage_thumb_(firstpage_thumb),
               maxLineSize(maxLineLen),
+              first_line_index(0),
               lastParaWasTitle(false),
               inSubSection(false) {
         min_left = -1;
@@ -1183,7 +1187,8 @@ public:
         avg_left = 0;
         avg_right = 0;
         avg_center = 0;
-        paraCount = 0;
+        blocks_count_ = 0;
+        para_count_ = 0;
         linesToSkip = 0;
         smart_format_flags_ = tftPreFormatted;
     }
@@ -1592,7 +1597,7 @@ public:
                 } // no empty lines
             } else {
                 if ((startline == endline && str.length() < 4)
-                    || (paraCount < 2 && str.length() < 50 && startline < length() - 2
+                    || (para_count_ < 2 && str.length() < 50 && startline < length() - 2
                         && (get(startline + 1)->rpos == 0 || get(startline + 2)->rpos == 0))) {
                     isHeader = true;
                 }
@@ -1616,38 +1621,38 @@ public:
                 isHeader = false;
             }
         }
-        if (!str.empty()) {
-            const lChar16* title_tag = L"title";
-            if (isHeader) {
-                if (singleChar) {
-                    title_tag = L"subtitle";
-                    lastParaWasTitle = false;
-                } else {
-                    if (!lastParaWasTitle) {
-                        if (inSubSection) {
-                            callback->OnTagClose(NULL, L"section");
-                        }
-                        callback->OnTagOpenNoAttr(NULL, L"section");
-                        inSubSection = true;
-                    }
-                    lastParaWasTitle = true;
-                }
-                callback->OnTagOpenNoAttr(NULL, title_tag);
-            } else {
-                lastParaWasTitle = false;
-            }
-            callback->OnTagOpenNoAttr(NULL, L"p");
-            callback->OnText(str.c_str(), str.length(), TXTFLG_TRIM | TXTFLG_TRIM_REMOVE_EOL_HYPHENS);
-            callback->OnTagClose(NULL, L"p");
-            if (isHeader) {
-                callback->OnTagClose(NULL, title_tag);
-            }
-            paraCount++;
-        } else {
+        if (str.empty()) {
             if (!(smart_format_flags_ & tftParaEmptyLineDelim) || !isHeader) {
                 callback->OnTagOpenAndClose(NULL, L"empty-line");
             }
+            return;
         }
+        const lChar16* title_tag = L"title";
+        if (isHeader) {
+            if (singleChar) {
+                title_tag = L"subtitle";
+                lastParaWasTitle = false;
+            } else {
+                if (!lastParaWasTitle) {
+                    if (inSubSection) {
+                        callback->OnTagClose(NULL, L"section");
+                    }
+                    callback->OnTagOpenNoAttr(NULL, L"section");
+                    inSubSection = true;
+                }
+                lastParaWasTitle = true;
+            }
+            callback->OnTagOpenNoAttr(NULL, title_tag);
+        } else {
+            lastParaWasTitle = false;
+        }
+        callback->OnTagOpenNoAttr(NULL, L"p");
+        callback->OnText(str.c_str(), str.length(), TXTFLG_TRIM | TXTFLG_TRIM_REMOVE_EOL_HYPHENS);
+        callback->OnTagClose(NULL, L"p");
+        if (isHeader) {
+            callback->OnTagClose(NULL, title_tag);
+        }
+        para_count_++;
     }
 
     class PMLTextImport {
@@ -2101,13 +2106,15 @@ public:
     /// one line per paragraph
     bool DoParaPerLineImport(LvXMLParserCallback* callback) {
         CRLog::debug("DoParaPerLineImport()");
-        int remainingLines = 0;
+        bool done = false;
+        int remaining_lines = 0;
         do {
-            for (int i = remainingLines; i < length(); i++) {
+            for (int i = remaining_lines; i < length(); i++) {
                 LVTextFileLine* item = get(i);
                 if (TXT_SMART_HEADERS && (smart_format_flags_ & tftHeadersDoubleEmptyLineBefore)) {
                     if (!item->empty()) {
                         AddPara(i, i, callback);
+                        blocks_count_++;
                     }
                 } else {
                     if (!item->empty()) {
@@ -2115,10 +2122,50 @@ public:
                     } else {
                         AddEmptyLine(callback);
                     }
+                    blocks_count_++;
+                }
+                if (firstpage_thumb_ && blocks_count_ >= FIRSTPAGE_BLOCKS_MAX) {
+                    done = true;
+                    break;
                 }
             }
+            if (done) {
+                break;
+            }
             RemoveLines(length() - 3);
-            remainingLines = 3;
+            remaining_lines = 3;
+        } while (ReadLines(100));
+        if (inSubSection) {
+            callback->OnTagClose(NULL, L"section");
+        }
+        return true;
+    }
+    /// delimited by empty lines
+    bool DoPreFormattedImport(LvXMLParserCallback* callback) {
+        CRLog::debug("DoPreFormattedImport()");
+        bool done = false;
+        int remaining_lines = 0;
+        do {
+            for (int i = remaining_lines; i < length(); i++) {
+                LVTextFileLine* item = get(i);
+                if (item->rpos > item->lpos) {
+                    callback->OnTagOpenNoAttr(NULL, L"pre");
+                    callback->OnText(item->text.c_str(), item->text.length(), item->flags);
+                    callback->OnTagClose(NULL, L"pre");
+                } else {
+                    callback->OnTagOpenAndClose(NULL, L"empty-line");
+                }
+                blocks_count_++;
+                if (firstpage_thumb_ && blocks_count_ >= FIRSTPAGE_BLOCKS_MAX) {
+                    done = true;
+                    break;
+                }
+            }
+            if (done) {
+                break;
+            }
+            RemoveLines(length() - 3);
+            remaining_lines = 3;
         } while (ReadLines(100));
         if (inSubSection) {
             callback->OnTagClose(NULL, L"section");
@@ -2162,7 +2209,11 @@ public:
             } else {
                 AddEmptyLine(callback);
             }
+            blocks_count_++;
             pos = i;
+            if (firstpage_thumb_ && blocks_count_ >= FIRSTPAGE_BLOCKS_MAX) {
+                break;
+            }
         }
         if (inSubSection) {
             callback->OnTagClose(NULL, L"section");
@@ -2217,39 +2268,21 @@ public:
             }
             if (i >= pos) {
                 AddPara(pos, i, callback);
+                blocks_count_++;
                 if (emptyLineCount) {
                     if (shortLineCount > 1) {
                         AddEmptyLine(callback);
+                        blocks_count_++;
                     }
                     shortLineCount = 0;
                     emptyLineCount = 0;
                 }
             }
             pos = i + 1;
-        }
-        if (inSubSection) {
-            callback->OnTagClose(NULL, L"section");
-        }
-        return true;
-    }
-    /// delimited by empty lines
-    bool DoPreFormattedImport(LvXMLParserCallback* callback) {
-        CRLog::debug("DoPreFormattedImport()");
-        int remainingLines = 0;
-        do {
-            for (int i = remainingLines; i < length(); i++) {
-                LVTextFileLine* item = get(i);
-                if (item->rpos > item->lpos) {
-                    callback->OnTagOpenNoAttr(NULL, L"pre");
-                    callback->OnText(item->text.c_str(), item->text.length(), item->flags);
-                    callback->OnTagClose(NULL, L"pre");
-                } else {
-                    callback->OnTagOpenAndClose(NULL, L"empty-line");
-                }
+            if (firstpage_thumb_ && blocks_count_ >= FIRSTPAGE_BLOCKS_MAX) {
+                break;
             }
-            RemoveLines(length() - 3);
-            remainingLines = 3;
-        } while (ReadLines(100));
+        }
         if (inSubSection) {
             callback->OnTagClose(NULL, L"section");
         }
@@ -2407,7 +2440,7 @@ bool LVTextParser::CheckFormat()
 
 /// parses input stream
 bool LVTextParser::Parse() {
-    LVTextLineQueue queue(this, 2000);
+    LVTextLineQueue queue(this, firstpage_thumb_, 2000);
     queue.ReadLines(2000);
     if (smart_format_) {
         queue.TxtSmartFormat();

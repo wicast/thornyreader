@@ -63,6 +63,7 @@ LVDocView::LVDocView()
           config_embeded_styles_(false),
           config_embeded_fonts_(false),
           config_enable_footnotes_(true),
+          config_firstpage_thumb_(false),
           config_txt_smart_format_(true)
 {
 	config_font_face_ = lString8("Arial, Roboto");
