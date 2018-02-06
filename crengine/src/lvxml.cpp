@@ -1013,7 +1013,7 @@ static bool startsWithOneOf( const lString16 & s, const lChar16 * list[] )
 
 #define TXT_SMART_HEADERS false
 #define TXT_SMART_DESCRIPTION false
-#define FIRSTPAGE_BLOCKS_MAX 50
+#define FIRSTPAGE_BLOCKS_MAX 100
 
 int DetectHeadingLevelByText(const lString16& str) {
     if (!TXT_SMART_HEADERS) {

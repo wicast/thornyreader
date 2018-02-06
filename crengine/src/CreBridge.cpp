@@ -301,6 +301,14 @@ void CreBridge::processConfig(CmdRequest& request, CmdResponse& response)
             if (bool_val != gFlgFloatingPunctuationEnabled) {
                 gFlgFloatingPunctuationEnabled = bool_val;
             }
+        } else if (key == CONFIG_CRE_FIRSTPAGE_THUMB) {
+            int int_val = atoi(val);
+            if (int_val < 0 || int_val > 1) {
+                response.result = RES_BAD_REQ_DATA;
+                return;
+            }
+            bool bool_val = (bool) int_val;
+            doc_view_->cfg_firstpage_thumb_ = bool_val;
         } else {
             CRLog::warn("processConfig unknown key: key=%d, val=%s", key, val);
         }
